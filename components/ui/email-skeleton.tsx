@@ -10,7 +10,10 @@ interface EmailSkeletonProps {
   variant?: "inbox" | "priority";
 }
 
-export function EmailSkeleton({ count = 1, variant = "inbox" }: EmailSkeletonProps) {
+export function EmailSkeleton({
+  count = 1,
+  variant = "inbox",
+}: EmailSkeletonProps) {
   const { theme } = useTheme();
 
   const skeletons = Array.from({ length: count }, (_, i) => i);
@@ -23,7 +26,7 @@ export function EmailSkeleton({ count = 1, variant = "inbox" }: EmailSkeletonPro
             key={`skeleton-${i}`}
             style={{
               padding: "16px",
-              borderBottom: `1px solid ${theme.border}`,
+              borderBottom: `1px solid ${theme.borderMuted}`,
               display: "flex",
               gap: "16px",
               alignItems: "center",
@@ -37,7 +40,7 @@ export function EmailSkeleton({ count = 1, variant = "inbox" }: EmailSkeletonPro
                 width: "48px",
                 height: "48px",
                 borderRadius: "50%",
-                background: theme.cardBg,
+                background: theme.bgCard,
                 flexShrink: 0,
               }}
             />
@@ -49,7 +52,7 @@ export function EmailSkeleton({ count = 1, variant = "inbox" }: EmailSkeletonPro
                 style={{
                   height: "14px",
                   width: "40%",
-                  background: theme.cardBg,
+                  background: theme.bgCard,
                   borderRadius: "4px",
                   marginBottom: "8px",
                 }}
@@ -60,7 +63,7 @@ export function EmailSkeleton({ count = 1, variant = "inbox" }: EmailSkeletonPro
                 style={{
                   height: "16px",
                   width: "80%",
-                  background: theme.cardBg,
+                  background: theme.bgCard,
                   borderRadius: "4px",
                   marginBottom: "8px",
                 }}
@@ -71,7 +74,7 @@ export function EmailSkeleton({ count = 1, variant = "inbox" }: EmailSkeletonPro
                 style={{
                   height: "12px",
                   width: "60%",
-                  background: theme.cardBg,
+                  background: theme.bgCard,
                   borderRadius: "4px",
                 }}
               />
@@ -83,7 +86,7 @@ export function EmailSkeleton({ count = 1, variant = "inbox" }: EmailSkeletonPro
                 width: "80px",
                 height: "24px",
                 borderRadius: "12px",
-                background: theme.cardBg,
+                background: theme.bgCard,
                 flexShrink: 0,
               }}
             />
@@ -101,7 +104,7 @@ export function EmailSkeleton({ count = 1, variant = "inbox" }: EmailSkeletonPro
           key={`skeleton-${i}`}
           style={{
             padding: "14px 16px",
-            borderBottom: `1px solid ${theme.border}`,
+            borderBottom: `1px solid ${theme.borderMuted}`,
             opacity: 0.6,
             animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
           }}
@@ -119,7 +122,7 @@ export function EmailSkeleton({ count = 1, variant = "inbox" }: EmailSkeletonPro
               style={{
                 height: "14px",
                 width: "30%",
-                background: theme.cardBg,
+                background: theme.bgCard,
                 borderRadius: "4px",
               }}
             />
@@ -127,7 +130,7 @@ export function EmailSkeleton({ count = 1, variant = "inbox" }: EmailSkeletonPro
               style={{
                 height: "14px",
                 width: "15%",
-                background: theme.cardBg,
+                background: theme.bgCard,
                 borderRadius: "4px",
               }}
             />
@@ -138,7 +141,7 @@ export function EmailSkeleton({ count = 1, variant = "inbox" }: EmailSkeletonPro
             style={{
               height: "16px",
               width: "70%",
-              background: theme.cardBg,
+              background: theme.bgCard,
               borderRadius: "4px",
               marginBottom: "8px",
             }}
@@ -149,7 +152,7 @@ export function EmailSkeleton({ count = 1, variant = "inbox" }: EmailSkeletonPro
             style={{
               height: "12px",
               width: "90%",
-              background: theme.cardBg,
+              background: theme.bgCard,
               borderRadius: "4px",
             }}
           />

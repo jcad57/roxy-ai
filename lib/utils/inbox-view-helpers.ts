@@ -14,3 +14,9 @@ export const getFolders = (emails: Email[]) => [
   { id: "drafts" as FolderType, label: "Drafts", icon: "📝", count: 0 },
   { id: "trash" as FolderType, label: "Trash", icon: "🗑️", count: 0 },
 ];
+
+export const getPriorityColor = (priority: number) => {
+  if (priority >= 80) return "#f43f5e";
+  if (priority >= 50) return "#f59e0b";
+  return "#22c55e";
+};

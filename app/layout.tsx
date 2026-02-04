@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "@/lib/providers/theme-provider";
+import { AuthProvider } from "@/lib/providers/auth-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -33,7 +34,9 @@ export default function RootLayout({
         <meta name="theme-color" content="#0f172a" />
       </head>
       <body style={{ margin: 0, padding: 0 }}>
-        <ThemeProvider>{children}</ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

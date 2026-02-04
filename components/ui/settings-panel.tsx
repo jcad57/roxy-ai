@@ -6,7 +6,7 @@
  */
 
 import type { ThemeName } from "@/lib/types/theme";
-import type { FontSize } from "@/lib/providers/theme-provider";
+import type { FontSize } from "@/lib/types/theme";
 import { useTheme } from "@/lib/providers/theme-provider";
 import { useResponsive } from "@/lib/hooks/use-responsive";
 import { responsivePadding } from "@/lib/utils/responsive-styles";
@@ -49,8 +49,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { theme, themeName, setTheme, fontSize, setFontSize } = useTheme();
   const { breakpoint, isMobile, isTablet } = useResponsive();
 
-  const handleThemeChange = (newTheme: ThemeName) => {
-    setTheme(newTheme);
+  const handleThemeChange = async (newTheme: ThemeName) => {
+    await setTheme(newTheme);
   };
 
   const handleFontSizeChange = (newSize: FontSize) => {
@@ -122,7 +122,13 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               >
                 ⚙
               </div>
-              <span style={{ fontSize: 16, fontWeight: 700, color: theme.textPrimary }}>
+              <span
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: theme.textPrimary,
+                }}
+              >
                 Settings
               </span>
             </div>
@@ -141,7 +147,9 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               ×
             </button>
           </div>
-          <div style={{ fontSize: 12.5, color: theme.textMuted, lineHeight: 1.5 }}>
+          <div
+            style={{ fontSize: 12.5, color: theme.textMuted, lineHeight: 1.5 }}
+          >
             Customize your workspace appearance and preferences
           </div>
         </div>
@@ -182,8 +190,14 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                       flex: 1,
                       padding: "16px",
                       borderRadius: 12,
-                      border: `2px solid ${isActive ? themeOption.preview.accent : theme.borderMuted}`,
-                      background: isActive ? `${themeOption.preview.accent}10` : theme.bgCard,
+                      border: `2px solid ${
+                        isActive
+                          ? themeOption.preview.accent
+                          : theme.borderMuted
+                      }`,
+                      background: isActive
+                        ? `${themeOption.preview.accent}10`
+                        : theme.bgCard,
                       cursor: "pointer",
                       transition: "all 0.2s",
                       display: "flex",
@@ -193,7 +207,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive) {
-                        e.currentTarget.style.borderColor = themeOption.preview.accent + "60";
+                        e.currentTarget.style.borderColor =
+                          themeOption.preview.accent + "60";
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -207,7 +222,9 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                       style={{
                         fontSize: 13,
                         fontWeight: isActive ? 700 : 600,
-                        color: isActive ? themeOption.preview.accent : theme.textPrimary,
+                        color: isActive
+                          ? themeOption.preview.accent
+                          : theme.textPrimary,
                       }}
                     >
                       {themeOption.label.replace(" Theme", "")}
@@ -247,7 +264,9 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                       flex: 1,
                       padding: "16px",
                       borderRadius: 12,
-                      border: `2px solid ${isActive ? theme.accent : theme.borderMuted}`,
+                      border: `2px solid ${
+                        isActive ? theme.accent : theme.borderMuted
+                      }`,
                       background: isActive ? theme.accentDim : theme.bgCard,
                       cursor: "pointer",
                       transition: "all 0.2s",
@@ -258,7 +277,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive) {
-                        e.currentTarget.style.borderColor = theme.accentDimBorder;
+                        e.currentTarget.style.borderColor =
+                          theme.accentDimBorder;
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -269,7 +289,12 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                   >
                     <div
                       style={{
-                        fontSize: sizeOption.id === "small" ? 20 : sizeOption.id === "medium" ? 26 : 32,
+                        fontSize:
+                          sizeOption.id === "small"
+                            ? 20
+                            : sizeOption.id === "medium"
+                            ? 26
+                            : 32,
                         fontWeight: 600,
                         color: isActive ? theme.accentLight : theme.textMuted,
                       }}
@@ -297,9 +322,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 lineHeight: 1.5,
               }}
             >
-              Adjust the font size across the entire application for better readability
+              Adjust the font size across the entire application for better
+              readability
             </div>
-            
+
             {/* Live Preview */}
             <div
               style={{
@@ -310,14 +336,35 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 borderRadius: 10,
               }}
             >
-              <div style={{ fontSize: "0.7em", color: theme.textDim, marginBottom: 8, fontWeight: 600 }}>
+              <div
+                style={{
+                  fontSize: "0.7em",
+                  color: theme.textDim,
+                  marginBottom: 8,
+                  fontWeight: 600,
+                }}
+              >
                 PREVIEW
               </div>
-              <div style={{ fontSize: "1em", color: theme.textPrimary, lineHeight: 1.6 }}>
-                The quick brown fox jumps over the lazy dog. This preview text will scale based on your selected font size.
+              <div
+                style={{
+                  fontSize: "1em",
+                  color: theme.textPrimary,
+                  lineHeight: 1.6,
+                }}
+              >
+                The quick brown fox jumps over the lazy dog. This preview text
+                will scale based on your selected font size.
               </div>
-              <div style={{ fontSize: "0.75em", color: theme.textMuted, marginTop: 8 }}>
-                Font size: {fontSize.charAt(0).toUpperCase() + fontSize.slice(1)}
+              <div
+                style={{
+                  fontSize: "0.75em",
+                  color: theme.textMuted,
+                  marginTop: 8,
+                }}
+              >
+                Font size:{" "}
+                {fontSize.charAt(0).toUpperCase() + fontSize.slice(1)}
               </div>
             </div>
           </div>
@@ -346,9 +393,16 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               }}
             >
               <div style={{ fontSize: 32, marginBottom: 8 }}>🚀</div>
-              <div style={{ fontSize: 12, color: theme.textMuted, lineHeight: 1.6 }}>
-                Additional customization options will be available soon, including notification
-                preferences, keyboard shortcuts, and more.
+              <div
+                style={{
+                  fontSize: 12,
+                  color: theme.textMuted,
+                  lineHeight: 1.6,
+                }}
+              >
+                Additional customization options will be available soon,
+                including notification preferences, keyboard shortcuts, and
+                more.
               </div>
             </div>
           </div>

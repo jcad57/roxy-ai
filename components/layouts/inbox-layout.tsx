@@ -15,14 +15,15 @@ import type {
 } from "@/lib/types/email";
 
 import { useTheme } from "@/lib/providers/theme-provider";
-import { mockContextTags } from "@/lib/data/mock-context-tags";
 import { useResponsive } from "@/lib/hooks/use-responsive";
 import { useEmailData } from "@/lib/hooks/use-email-data";
 import { useResponseSuggestion } from "@/lib/hooks/use-response-suggestion";
-import { ResponseCache } from "@/lib/services/response/response-cache";
+import { useContextTags } from "@/lib/hooks/use-context-tags";
 import { ResponseSuggestionPanel } from "@/components/ui/response-suggestion-panel";
 import { EmailSkeleton } from "@/components/ui/email-skeleton";
 import { emailCategoryColorPallets } from "@/lib/constants/menu-color-pallets";
+import { getPriorityColor } from "@/lib/utils/inbox-view-helpers";
+import { ContextTag } from "@/lib/services/storage/context-tags-service";
 
 import InboxLayoutWrapper from "../ui/inbox-view/inbox-layout-wrapper";
 import InboxLeftSidebar from "../ui/inbox-view/inbox-left-sidebar";
@@ -39,8 +40,17 @@ export function InboxLayout({
   const { breakpoint, isMobile } = useResponsive();
   const { enrichedEmails } = useEmailData();
 
+  // Context tags and custom categories (pass emails to extract tags)
+  const {
+    tags: contextTags,
+    groupedTags,
+    categories: customCategories,
+    createCategory,
+    isCreatingCategory,
+  } = useContextTags(emails);
+
   const [activeFolder, setActiveFolder] = useState<FolderType>("inbox");
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("all"); // Can be "all" or a custom category ID
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [showNewTabPanel, setShowNewTabPanel] = useState(false);
   const [showResponsePanel, setShowResponsePanel] = useState(false);
@@ -64,87 +74,93 @@ export function InboxLayout({
     generateQuick,
   } = useResponseSuggestion(selectedEnrichedEmail || ({} as any));
 
-  // Auto-generate quick replies for high-priority emails (only once per email)
-  useEffect(() => {
-    if (
-      selectedEmail &&
-      selectedEmail.priority >= 80 &&
-      selectedEnrichedEmail
-    ) {
-      // Use consistent cache key format
-      const cacheKey = `quick_reply_${selectedEnrichedEmail.id}`;
-      const cached = ResponseCache.get(cacheKey);
+  // New category form state
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryColor, setNewCategoryColor] = useState("#3b82f6");
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
-      console.log(
-        `📧 Selected email ${selectedEmail.id} (priority: ${selectedEmail.priority})`
-      );
-
-      if (!cached) {
-        console.log(`   🔄 No cache found, triggering generation...`);
-        generateQuick();
-      } else {
-        console.log(`   ✅ Cache found, loading from cache`);
-        // Trigger generateQuick to load from cache
-        generateQuick();
-      }
-    }
-  }, [selectedEmail?.id]);
-
-  // New tab form state
-  const [newTabName, setNewTabName] = useState("");
-  const [newTabColor, setNewTabColor] = useState("#3b82f6");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-
-  // Category tabs with "All" as default
-  const [categoryTabs, setCategoryTabs] = useState<CategoryTab[]>([
+  // Convert custom categories to CategoryTab format
+  const categoryTabs: CategoryTab[] = [
     { id: "all", label: "All", color: "#64748b", tags: [] },
-  ]);
+    ...customCategories.map((cat) => ({
+      id: cat.id,
+      label: cat.label,
+      color: cat.color,
+      tags: cat.tag_ids,
+    })),
+  ];
 
-  // Filter emails based on active tab
+  // Filter emails based on active tab/category
   let filteredEmails = emails;
   const currentTab = categoryTabs.find((tab) => tab.id === activeTab);
 
   if (currentTab && currentTab.id !== "all" && currentTab.tags.length > 0) {
-    // Show emails that have at least one tag matching the tab's selected tags
+    // Filter emails that have any of the tab's tags
     filteredEmails = emails.filter((email) =>
-      email.tags.some((tag) => currentTab.tags.includes(tag))
+      email.tags.some((emailTag) => {
+        const normalizedEmailTag = emailTag
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-");
+        return currentTab.tags.some(
+          (tabTag) =>
+            normalizedEmailTag === tabTag ||
+            normalizedEmailTag === tabTag.toLowerCase()
+        );
+      })
     );
   }
 
-  // Sort emails by newest to oldest (for demo, using ID as proxy for timestamp)
+  // Sort emails by newest to oldest
   const sortedEmails = [...filteredEmails].sort((a, b) => b.id - a.id);
 
-  const handleCreateTab = () => {
-    if (!newTabName.trim() || selectedTags.length === 0) return;
-
-    const newTab: CategoryTab = {
-      id: `tab-${Date.now()}`,
-      label: newTabName.trim(),
-      color: newTabColor,
-      tags: selectedTags,
-    };
-
-    setCategoryTabs((prev) => [...prev, newTab]);
-    setActiveTab(newTab.id);
-
-    // Reset form
-    setShowNewTabPanel(false);
-    setNewTabName("");
-    setNewTabColor("#3b82f6");
-    setSelectedTags([]);
-  };
-
-  const handleCancelTab = () => {
-    setShowNewTabPanel(false);
-    setNewTabName("");
-    setNewTabColor("#3b82f6");
-    setSelectedTags([]);
-  };
-
-  const toggleTag = (tagId: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
+  const toggleTagSelection = (tagId: string) => {
+    setSelectedTagIds((prev) =>
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId]
     );
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      alert("Please enter a category name.");
+      return;
+    }
+
+    if (selectedTagIds.length === 0) {
+      alert("Please select at least one tag.");
+      return;
+    }
+
+    try {
+      const newCategory = await createCategory({
+        label: newCategoryName.trim(),
+        color: newCategoryColor,
+        tagIds: selectedTagIds,
+      });
+
+      // Switch to the new category
+      setActiveTab(newCategory.id);
+
+      // Reset form
+      setShowNewTabPanel(false);
+      setNewCategoryName("");
+      setNewCategoryColor("#3b82f6");
+      setSelectedTagIds([]);
+
+      console.log("✅ Created custom category:", newCategory);
+    } catch (error) {
+      console.error("❌ Failed to create category:", error);
+      alert("Failed to create category. Please try again.");
+    }
+  };
+
+  const handleCancelCategory = () => {
+    setShowNewTabPanel(false);
+    setNewCategoryName("");
+    setNewCategoryColor("#3b82f6");
+    setSelectedTagIds([]);
   };
 
   return (
@@ -272,6 +288,7 @@ export function InboxLayout({
         >
           {sortedEmails.map((email, index) => {
             const isSelected = selectedEmail?.id === email.id;
+            const priorityColor = getPriorityColor(email.priority);
             return (
               <div
                 key={email.id}
@@ -341,16 +358,28 @@ export function InboxLayout({
                     >
                       {email.from}
                     </span>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        color: theme.textDim,
-                        flexShrink: 0,
-                        marginLeft: 12,
-                      }}
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
                     >
-                      {email.time}
-                    </span>
+                      <p
+                        style={{
+                          fontSize: 11,
+                          color: theme.textDim,
+                          flexShrink: 0,
+                          marginLeft: 12,
+                        }}
+                      >
+                        {email.time}
+                      </p>
+                      <p
+                        style={{
+                          backgroundColor: priorityColor,
+                          borderRadius: "100px",
+                          width: 8,
+                          height: 8,
+                        }}
+                      ></p>
+                    </div>
                   </div>
 
                   <div
@@ -497,7 +526,7 @@ export function InboxLayout({
         <>
           {/* Backdrop */}
           <div
-            onClick={handleCancelTab}
+            onClick={handleCancelCategory}
             style={{
               position: "fixed",
               top: 0,
@@ -548,7 +577,7 @@ export function InboxLayout({
                 Create New Category
               </h2>
               <button
-                onClick={handleCancelTab}
+                onClick={handleCancelCategory}
                 style={{
                   background: "transparent",
                   border: "none",
@@ -600,8 +629,8 @@ export function InboxLayout({
                 </label>
                 <input
                   type="text"
-                  value={newTabName}
-                  onChange={(e) => setNewTabName(e.target.value)}
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
                   placeholder="e.g., Urgent Tasks, Marketing, etc."
                   style={{
                     width: "100%",
@@ -648,11 +677,11 @@ export function InboxLayout({
                   }}
                 >
                   {emailCategoryColorPallets.map((color: string) => {
-                    const isSelected = newTabColor === color;
+                    const isSelected = newCategoryColor === color;
                     return (
                       <button
                         key={color}
-                        onClick={() => setNewTabColor(color)}
+                        onClick={() => setNewCategoryColor(color)}
                         style={{
                           width: "100%",
                           aspectRatio: "1",
@@ -721,83 +750,97 @@ export function InboxLayout({
                   category. AI automatically tags emails based on their content.
                 </p>
 
-                {/* Tags grouped by category */}
-                {[
-                  "action",
-                  "priority",
-                  "topic",
-                  "project",
-                  "event",
-                  "person",
-                ].map((category) => {
-                  const categoryTags = mockContextTags.filter(
-                    (tag) => tag.category === category
-                  );
-                  if (categoryTags.length === 0) return null;
+                {/* Display AI-generated tags grouped by category */}
+                {contextTags.length === 0 ? (
+                  <div
+                    style={{
+                      padding: 16,
+                      background: theme.bgCard,
+                      borderRadius: 8,
+                      textAlign: "center",
+                      color: theme.textMuted,
+                      fontSize: 12,
+                    }}
+                  >
+                    No AI-generated tags available yet. Tags will appear after
+                    emails are analyzed.
+                  </div>
+                ) : (
+                  Object.entries(groupedTags).map(([category, tags]) => {
+                    if (tags.length === 0) return null;
 
-                  return (
-                    <div key={category} style={{ marginBottom: 20 }}>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: theme.textDim,
-                          textTransform: "uppercase",
-                          letterSpacing: 0.8,
-                          marginBottom: 10,
-                        }}
-                      >
-                        {category}
+                    return (
+                      <div key={category} style={{ marginBottom: 20 }}>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: theme.textDim,
+                            textTransform: "uppercase",
+                            letterSpacing: 0.8,
+                            marginBottom: 10,
+                          }}
+                        >
+                          {category} ({tags.length})
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: 8,
+                          }}
+                        >
+                          {tags.map((tag: ContextTag) => {
+                            const isSelected = selectedTagIds.includes(tag.id);
+                            return (
+                              <button
+                                key={tag.id}
+                                onClick={() => toggleTagSelection(tag.id)}
+                                style={{
+                                  padding: "6px 12px",
+                                  background: isSelected
+                                    ? newCategoryColor
+                                    : theme.bg,
+                                  border: `1px solid ${
+                                    isSelected
+                                      ? newCategoryColor
+                                      : theme.borderMuted
+                                  }`,
+                                  borderRadius: 6,
+                                  fontSize: 11,
+                                  fontWeight: isSelected ? 600 : 500,
+                                  color: isSelected
+                                    ? "#ffffff"
+                                    : theme.textMuted,
+                                  cursor: "pointer",
+                                  transition: "all 0.15s",
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isSelected) {
+                                    e.currentTarget.style.borderColor =
+                                      newCategoryColor;
+                                    e.currentTarget.style.color =
+                                      newCategoryColor;
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isSelected) {
+                                    e.currentTarget.style.borderColor =
+                                      theme.borderMuted;
+                                    e.currentTarget.style.color =
+                                      theme.textMuted;
+                                  }
+                                }}
+                              >
+                                {tag.label} ({tag.count})
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: 8,
-                        }}
-                      >
-                        {categoryTags.map((tag) => {
-                          const isSelected = selectedTags.includes(tag.id);
-                          return (
-                            <button
-                              key={tag.id}
-                              onClick={() => toggleTag(tag.id)}
-                              style={{
-                                padding: "6px 12px",
-                                background: isSelected ? newTabColor : theme.bg,
-                                border: `1px solid ${
-                                  isSelected ? newTabColor : theme.borderMuted
-                                }`,
-                                borderRadius: 6,
-                                fontSize: 11,
-                                fontWeight: isSelected ? 600 : 500,
-                                color: isSelected ? "#ffffff" : theme.textMuted,
-                                cursor: "pointer",
-                                transition: "all 0.15s",
-                              }}
-                              onMouseEnter={(e) => {
-                                if (!isSelected) {
-                                  e.currentTarget.style.borderColor =
-                                    newTabColor;
-                                  e.currentTarget.style.color = newTabColor;
-                                }
-                              }}
-                              onMouseLeave={(e) => {
-                                if (!isSelected) {
-                                  e.currentTarget.style.borderColor =
-                                    theme.borderMuted;
-                                  e.currentTarget.style.color = theme.textMuted;
-                                }
-                              }}
-                            >
-                              {tag.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -811,7 +854,7 @@ export function InboxLayout({
               }}
             >
               <button
-                onClick={handleCancelTab}
+                onClick={handleCancelCategory}
                 style={{
                   flex: 1,
                   padding: "12px 20px",
@@ -834,14 +877,18 @@ export function InboxLayout({
                 Cancel
               </button>
               <button
-                onClick={handleCreateTab}
-                disabled={!newTabName.trim() || selectedTags.length === 0}
+                onClick={handleCreateCategory}
+                disabled={
+                  isCreatingCategory ||
+                  !newCategoryName.trim() ||
+                  selectedTagIds.length === 0
+                }
                 style={{
                   flex: 1,
                   padding: "12px 20px",
                   background:
-                    newTabName.trim() && selectedTags.length > 0
-                      ? newTabColor
+                    newCategoryName.trim() && selectedTagIds.length > 0
+                      ? newCategoryColor
                       : theme.borderMuted,
                   border: "none",
                   borderRadius: 8,
@@ -849,25 +896,39 @@ export function InboxLayout({
                   fontWeight: 700,
                   color: "#ffffff",
                   cursor:
-                    newTabName.trim() && selectedTags.length > 0
+                    newCategoryName.trim() &&
+                    selectedTagIds.length > 0 &&
+                    !isCreatingCategory
                       ? "pointer"
                       : "not-allowed",
                   transition: "all 0.15s",
                   opacity:
-                    newTabName.trim() && selectedTags.length > 0 ? 1 : 0.5,
+                    newCategoryName.trim() &&
+                    selectedTagIds.length > 0 &&
+                    !isCreatingCategory
+                      ? 1
+                      : 0.5,
                 }}
                 onMouseEnter={(e) => {
-                  if (newTabName.trim() && selectedTags.length > 0) {
+                  if (
+                    newCategoryName.trim() &&
+                    selectedTagIds.length > 0 &&
+                    !isCreatingCategory
+                  ) {
                     e.currentTarget.style.opacity = "0.9";
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (newTabName.trim() && selectedTags.length > 0) {
+                  if (
+                    newCategoryName.trim() &&
+                    selectedTagIds.length > 0 &&
+                    !isCreatingCategory
+                  ) {
                     e.currentTarget.style.opacity = "1";
                   }
                 }}
               >
-                Create Category
+                {isCreatingCategory ? "Creating..." : "Create Category"}
               </button>
             </div>
           </div>

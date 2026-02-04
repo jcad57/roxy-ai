@@ -2,18 +2,15 @@
 
 /**
  * Theme Provider
- * Manages theme state using React Query and provides theme context
+ * Manages theme state using React Query and Supabase for persistence
  */
 
 import { createContext, useContext, ReactNode, useEffect } from "react";
-import {
-  QueryClient,
-  QueryClientProvider,
-  useQuery,
-  useMutation,
-} from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ThemeName, ColorPalette, FontSize } from "@/lib/types/theme";
 import { getThemePalette, defaultTheme } from "@/lib/constants/theme-palettes";
+import { useUserPreferences } from "@/lib/hooks/use-user-preferences";
+import { useAuth } from "./auth-provider";
 
 // Create Query Client
 const queryClient = new QueryClient({
@@ -29,20 +26,21 @@ const queryClient = new QueryClient({
 interface ThemeContextValue {
   theme: ColorPalette;
   themeName: ThemeName;
-  setTheme: (themeName: ThemeName) => void;
+  setTheme: (themeName: ThemeName) => Promise<void>;
   fontSize: FontSize;
   setFontSize: (fontSize: FontSize) => void;
   isLight: boolean;
   isDark: boolean;
+  isLoading: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-// Local storage keys
+// Local storage keys (fallback when not authenticated)
 const THEME_STORAGE_KEY = "mailmind-theme";
 const FONT_SIZE_STORAGE_KEY = "mailmind-font-size";
 
-// Get theme from localStorage or default
+// Get theme from localStorage (fallback)
 function getStoredTheme(): ThemeName {
   if (typeof window === "undefined") return defaultTheme;
 
@@ -50,13 +48,12 @@ function getStoredTheme(): ThemeName {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Handle migration from old theme structure
       if (parsed.mode) {
         return parsed.mode as ThemeName;
       }
       if (
         typeof parsed === "string" &&
-        (parsed === "light" || parsed === "dark")
+        (parsed === "light" || parsed === "dark" || parsed === "red")
       ) {
         return parsed;
       }
@@ -68,7 +65,7 @@ function getStoredTheme(): ThemeName {
   return defaultTheme;
 }
 
-// Get font size from localStorage or default
+// Get font size from localStorage (fallback)
 function getStoredFontSize(): FontSize {
   if (typeof window === "undefined") return "medium";
 
@@ -87,7 +84,7 @@ function getStoredFontSize(): FontSize {
   return "medium";
 }
 
-// Save theme to localStorage
+// Save theme to localStorage (fallback)
 function saveTheme(themeName: ThemeName): void {
   if (typeof window === "undefined") return;
 
@@ -98,7 +95,7 @@ function saveTheme(themeName: ThemeName): void {
   }
 }
 
-// Save font size to localStorage
+// Save font size to localStorage (fallback)
 function saveFontSize(fontSize: FontSize): void {
   if (typeof window === "undefined") return;
 
@@ -109,45 +106,64 @@ function saveFontSize(fontSize: FontSize): void {
   }
 }
 
+// Map Supabase theme_mode to app ThemeName (handle 'system' -> 'dark' and support 'red')
+function mapSupabaseThemeToApp(
+  supabaseTheme?: "light" | "dark" | "system"
+): ThemeName {
+  if (!supabaseTheme) return defaultTheme;
+  if (supabaseTheme === "system") return "dark"; // Map system to dark for now
+  // Supabase only supports light/dark, not red yet - that's stored in localStorage
+  return supabaseTheme;
+}
+
+// Map app ThemeName to Supabase theme_mode ('red' -> 'dark' in Supabase, but keep in localStorage)
+function mapAppThemeToSupabase(
+  appTheme: ThemeName
+): "light" | "dark" | "system" {
+  if (appTheme === "red") return "dark"; // Store as dark in Supabase, localStorage has 'red'
+  return appTheme;
+}
+
 // Theme Provider Component
 function ThemeProviderInner({ children }: { children: ReactNode }) {
-  // Query for theme name
-  const { data: themeName = defaultTheme } = useQuery({
-    queryKey: ["theme"],
-    queryFn: getStoredTheme,
-    initialData: defaultTheme,
-  });
+  const { user } = useAuth();
+  const {
+    preferences,
+    updatePreferences,
+    isLoading: isLoadingPrefs,
+  } = useUserPreferences();
 
-  // Query for font size
-  const { data: fontSize = "medium" } = useQuery({
-    queryKey: ["fontSize"],
-    queryFn: getStoredFontSize,
-    initialData: "medium" as FontSize,
-  });
+  // Get theme from Supabase or fallback to localStorage
+  // For 'red' theme: localStorage has priority since Supabase doesn't support it yet
+  const localTheme = getStoredTheme();
+  const supabaseTheme = mapSupabaseThemeToApp(preferences?.theme_mode);
+  const themeName: ThemeName =
+    localTheme === "red" ? localTheme : supabaseTheme;
+  const fontSize: FontSize = "medium"; // Will be expanded later when added to schema
 
-  // Mutation to update theme
-  const themeMutation = useMutation({
-    mutationFn: async (newThemeName: ThemeName) => {
-      saveTheme(newThemeName);
-      return newThemeName;
-    },
-    onSuccess: (updated) => {
-      queryClient.setQueryData(["theme"], updated);
-    },
-  });
+  // Update theme (save to Supabase if authenticated, otherwise localStorage)
+  const setTheme = async (newThemeName: ThemeName): Promise<void> => {
+    // Always save to localStorage for immediate feedback and 'red' theme support
+    saveTheme(newThemeName);
 
-  // Mutation to update font size
-  const fontSizeMutation = useMutation({
-    mutationFn: async (newFontSize: FontSize) => {
-      saveFontSize(newFontSize);
-      return newFontSize;
-    },
-    onSuccess: (updated) => {
-      queryClient.setQueryData(["fontSize"], updated);
-      // Force a refetch to ensure state updates
-      queryClient.invalidateQueries({ queryKey: ["fontSize"] });
-    },
-  });
+    if (user && updatePreferences) {
+      try {
+        const supabaseThemeValue = mapAppThemeToSupabase(newThemeName);
+        await updatePreferences({ theme_mode: supabaseThemeValue });
+        console.log("✅ Theme saved to Supabase:", newThemeName);
+      } catch (error) {
+        console.error("❌ Failed to save theme to Supabase:", error);
+        // Already saved to localStorage, so UX is not affected
+      }
+    }
+  };
+
+  // Update font size (localStorage for now)
+  const setFontSize = (newFontSize: FontSize): void => {
+    saveFontSize(newFontSize);
+    // Force re-render by invalidating queries
+    queryClient.invalidateQueries({ queryKey: ["fontSize"] });
+  };
 
   // Apply theme and font size to document
   useEffect(() => {
@@ -170,11 +186,12 @@ function ThemeProviderInner({ children }: { children: ReactNode }) {
   const value: ThemeContextValue = {
     theme,
     themeName,
-    setTheme: (newThemeName) => themeMutation.mutate(newThemeName),
+    setTheme,
     fontSize,
-    setFontSize: (newFontSize) => fontSizeMutation.mutate(newFontSize),
+    setFontSize,
     isLight: themeName === "light",
     isDark: themeName === "dark",
+    isLoading: isLoadingPrefs,
   };
 
   return (

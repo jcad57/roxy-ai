@@ -80,17 +80,17 @@ export function ErrorBanner({ message, onDismiss, onRetry }: ErrorBannerProps) {
               fontSize: "12px",
               fontWeight: 500,
               color: theme.textPrimary,
-              background: theme.cardBg,
-              border: `1px solid ${theme.border}`,
+              background: theme.bgCard,
+              border: `1px solid ${theme.borderMuted}`,
               borderRadius: "4px",
               cursor: "pointer",
               transition: "all 0.2s",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = theme.hover;
+              e.currentTarget.style.background = theme.bgCardHover;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = theme.cardBg;
+              e.currentTarget.style.background = theme.bgCard;
             }}
           >
             Retry
@@ -112,7 +112,7 @@ export function ErrorBanner({ message, onDismiss, onRetry }: ErrorBannerProps) {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = theme.textPrimary;
-              e.currentTarget.style.background = theme.hover;
+              e.currentTarget.style.background = theme.bgCardHover;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = theme.textSecondary;

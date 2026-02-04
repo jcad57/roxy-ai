@@ -44,6 +44,9 @@ export function enrichedToLegacyEmail(enriched: EnrichedEmail): Email {
   const sentiment: EmailSentiment = enriched.enrichment?.aiSentiment ?? "neutral";
   const cluster: EmailCluster = enriched.enrichment?.aiCluster ?? "operations";
   const category: EmailCategory = enriched.enrichment?.aiCategory ?? "work";
+  
+  // Use AI-generated tags from enrichment (fallback to Outlook categories if no AI tags)
+  const tags = enriched.enrichment?.suggestedTags || enriched.categories || [];
 
   // Convert string ID to number for legacy compatibility
   const numericId = parseInt(enriched.id.substring(enriched.id.length - 8), 36) % 10000;
@@ -57,7 +60,7 @@ export function enrichedToLegacyEmail(enriched: EnrichedEmail): Email {
     time: timeStr,
     priority,
     category,
-    tags: enriched.categories || [],
+    tags, // Now using AI-generated tags
     cluster,
     read: enriched.isRead,
     sentiment,

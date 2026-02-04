@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import type { LayoutId } from "@/lib/types/layout";
 import { layouts } from "@/lib/constants/layouts";
 import { useEmailData } from "@/lib/hooks/use-email-data";
+import { useViewPreferences } from "@/lib/hooks/use-view-preferences";
 import {
   enrichedArrayToLegacy,
   sortByAIPriority,
@@ -32,18 +33,46 @@ import { CustomizeViewsPanel } from "@/components/ui/customize-views-panel";
 import { SettingsPanel } from "@/components/ui/settings-panel";
 import { AnalyzingIndicator } from "@/components/ui/analyzing-indicator";
 import { ErrorBanner } from "@/components/ui/error-banner";
+import { ProtectedRoute } from "@/components/auth/protected-route";
 import { toggleView } from "@/lib/utils/main-layout-helpers";
 import { AppLayoutWrapper } from "@/components/ui/app-layout-wrapper";
 import MainContentWrapper from "@/components/ui/main-content-wrapper";
 
-export default function EmailClientPage() {
+function EmailClient() {
   const allIds = layouts.map((l) => l.id);
+
+  // Supabase view preferences
+  const {
+    viewPreferences,
+    enabledViews: supabaseEnabledViews,
+    updateView,
+    updateViewOrder,
+    isLoading: isLoadingViews,
+  } = useViewPreferences();
+
+  // Local state with fallback to all views if Supabase not loaded yet
   const [enabledViews, setEnabledViews] = useState<LayoutId[]>(allIds);
   const [layoutOrder, setLayoutOrder] = useState<LayoutId[]>(allIds);
   const [activeLayout, setActiveLayout] = useState<LayoutId>("inbox");
   const [showPicker, setShowPicker] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [selected, setSelected] = useState<any>(null);
+
+  // Sync Supabase view preferences to local state
+  useEffect(() => {
+    if (viewPreferences.length > 0) {
+      const ordered = viewPreferences
+        .sort((a, b) => a.display_order - b.display_order)
+        .map((v) => v.view_id as LayoutId);
+
+      const enabled = viewPreferences
+        .filter((v) => v.enabled)
+        .map((v) => v.view_id as LayoutId);
+
+      setLayoutOrder(ordered);
+      setEnabledViews(enabled);
+    }
+  }, [viewPreferences]);
 
   // Email data with AI enrichment from IndexedDB
   const {
@@ -89,6 +118,68 @@ export default function EmailClientPage() {
   useEffect(() => {
     setSelected(null);
   }, [activeLayout]);
+
+  // Handlers for view preferences (save to Supabase)
+  const handleToggleView = async (id: LayoutId) => {
+    const isCurrentlyEnabled = enabledViews.includes(id);
+    const newEnabled = isCurrentlyEnabled
+      ? enabledViews.filter((v) => v !== id)
+      : [...enabledViews, id];
+
+    // Optimistically update local state
+    setEnabledViews(newEnabled);
+
+    // Save to Supabase
+    try {
+      await updateView({
+        viewId: id,
+        updates: { enabled: !isCurrentlyEnabled },
+      });
+      console.log("✅ View preference saved to Supabase");
+    } catch (error) {
+      console.error("❌ Failed to save view preference:", error);
+      // Rollback on error
+      setEnabledViews(enabledViews);
+    }
+  };
+
+  const handleReorderViews = async (newOrder: LayoutId[]) => {
+    // Optimistically update local state
+    setLayoutOrder(newOrder);
+
+    // Save to Supabase
+    try {
+      const orderedViews = newOrder.map((viewId, index) => ({
+        viewId,
+        order: index,
+      }));
+      await updateViewOrder(orderedViews);
+      console.log("✅ View order saved to Supabase");
+    } catch (error) {
+      console.error("❌ Failed to save view order:", error);
+      // Rollback on error
+      setLayoutOrder(layoutOrder);
+    }
+  };
+
+  const handleEnableAll = async () => {
+    // Optimistically update local state
+    setEnabledViews(allIds);
+
+    // Save to Supabase
+    try {
+      await Promise.all(
+        allIds.map((id) =>
+          updateView({ viewId: id, updates: { enabled: true } })
+        )
+      );
+      console.log("✅ All views enabled in Supabase");
+    } catch (error) {
+      console.error("❌ Failed to enable all views:", error);
+      // Rollback on error
+      setEnabledViews(enabledViews);
+    }
+  };
 
   // Sort layouts by custom order
   const orderedLayouts = [...layouts].sort((a, b) => {
@@ -185,9 +276,9 @@ export default function EmailClientPage() {
         <CustomizeViewsPanel
           layouts={orderedLayouts}
           enabledViews={enabledViews}
-          onToggleView={(id) => toggleView(id, allIds, setEnabledViews)}
-          onReorderViews={setLayoutOrder}
-          onEnableAll={() => setEnabledViews(allIds)}
+          onToggleView={handleToggleView}
+          onReorderViews={handleReorderViews}
+          onEnableAll={handleEnableAll}
           onClose={() => setShowPicker(false)}
         />
       )}
@@ -195,5 +286,14 @@ export default function EmailClientPage() {
       {/* Settings Panel */}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
     </AppLayoutWrapper>
+  );
+}
+
+// Export protected version
+export default function EmailClientPage() {
+  return (
+    <ProtectedRoute>
+      <EmailClient />
+    </ProtectedRoute>
   );
 }
