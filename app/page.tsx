@@ -1,65 +1,201 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+/**
+ * Main Email Client Page
+ * Orchestrates all layout views and UI components
+ */
+
+import { useState, useEffect } from "react";
+import type { LayoutId } from "@/lib/types/layout";
+import { layouts } from "@/lib/constants/layouts";
+import { useTheme } from "@/lib/providers/theme-provider";
+import { useEmailData } from "@/lib/hooks/use-email-data";
+import { enrichedArrayToLegacy, sortByAIPriority } from "@/lib/adapters/email-adapter";
+
+// Load dev helpers for console access
+import "@/lib/services/storage/dev-helpers";
+
+// Layout Components
+import { InboxLayout } from "@/components/layouts/inbox-layout";
+import { CommandLayout } from "@/components/layouts/command-layout";
+import { SpatialLayout } from "@/components/layouts/spatial-layout";
+import { ConversationLayout } from "@/components/layouts/conversation-layout";
+import { CalendarLayout } from "@/components/layouts/calendar-layout";
+import { KanbanLayout } from "@/components/layouts/kanban-layout";
+
+// UI Components
+import { NavBar } from "@/components/ui/nav-bar";
+import { LayoutSwitcher } from "@/components/ui/layout-switcher";
+import { CustomizeViewsPanel } from "@/components/ui/customize-views-panel";
+import { SettingsPanel } from "@/components/ui/settings-panel";
+import { AnalyzingIndicator } from "@/components/ui/analyzing-indicator";
+
+const layoutComponentMap: Record<LayoutId, React.ComponentType<any>> = {
+  inbox: InboxLayout,
+  command: CommandLayout,
+  spatial: SpatialLayout,
+  conversation: ConversationLayout,
+  calendar: CalendarLayout,
+  kanban: KanbanLayout,
+};
+
+export default function EmailClientPage() {
+  const allIds = layouts.map((l) => l.id);
+  const [enabledViews, setEnabledViews] = useState<LayoutId[]>(allIds);
+  const [layoutOrder, setLayoutOrder] = useState<LayoutId[]>(allIds);
+  const [activeLayout, setActiveLayout] = useState<LayoutId>("inbox");
+  const [showPicker, setShowPicker] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [selected, setSelected] = useState<any>(null);
+  const { theme } = useTheme();
+  
+  // Email data with AI enrichment from IndexedDB
+  const { 
+    enrichedEmails,
+    isLoading: isLoadingEmails,
+    isAnalyzing, 
+    progress, 
+    analyzedCount, 
+    totalToAnalyze,
+  } = useEmailData();
+  
+  // Convert to legacy Email format for existing UI components
+  const emails = sortByAIPriority(enrichedArrayToLegacy(enrichedEmails));
+  
+  // Debug logging
+  useEffect(() => {
+    console.log("📧 Email Data Status:");
+    console.log(`  Enriched Emails: ${enrichedEmails.length}`);
+    console.log(`  Converted Emails: ${emails.length}`);
+    console.log(`  Is Analyzing: ${isAnalyzing}`);
+    if (enrichedEmails.length > 0) {
+      console.log("  Sample enriched:", enrichedEmails[0]);
+    }
+    if (emails.length > 0) {
+      console.log("  Sample converted:", emails[0]);
+    }
+  }, [enrichedEmails, emails, isAnalyzing]);
+
+  // If user disables the currently active view, jump to the first enabled one
+  useEffect(() => {
+    if (!enabledViews.includes(activeLayout)) {
+      setActiveLayout(enabledViews[0]);
+    }
+  }, [enabledViews, activeLayout]);
+
+  // Clear selection when changing layouts
+  useEffect(() => {
+    setSelected(null);
+  }, [activeLayout]);
+
+  // Sort layouts by custom order
+  const orderedLayouts = [...layouts].sort((a, b) => {
+    const indexA = layoutOrder.indexOf(a.id);
+    const indexB = layoutOrder.indexOf(b.id);
+    return indexA - indexB;
+  });
+  
+  const visibleLayouts = orderedLayouts.filter((l) => enabledViews.includes(l.id));
+  const LayoutComponent = layoutComponentMap[activeLayout];
+  const currentLayout = orderedLayouts.find((l) => l.id === activeLayout);
+
+  const toggleView = (id: LayoutId) => {
+    setEnabledViews((prev) => {
+      if (prev.includes(id)) {
+        if (prev.length === 1) return prev; // always keep at least one
+        return prev.filter((v) => v !== id);
+      }
+      // Re-insert in original order
+      return allIds.filter((v) => prev.includes(v) || v === id);
+    });
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div
+      style={{
+        fontFamily: "'SF Mono', 'Fira Code', monospace",
+        background: theme.bg,
+        color: theme.textPrimary,
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Top Navigation */}
+      <NavBar emailCount={emails.length} onSettingsClick={() => setShowSettings(true)} />
+      
+      {/* AI Analysis Indicator */}
+      {isAnalyzing && (
+        <AnalyzingIndicator
+          progress={{
+            current: analyzedCount,
+            total: totalToAnalyze,
+            percentage: progress,
+          }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+      )}
+
+      <div
+        style={{
+          padding: "14px 24px",
+          flexShrink: 0,
+        }}
+      >
+        <LayoutSwitcher
+          layouts={visibleLayouts}
+          activeLayout={activeLayout}
+          onLayoutChange={setActiveLayout}
+          onCustomizeClick={() => setShowPicker(true)}
+          showCustomize={showPicker}
+          currentLayoutDesc={currentLayout?.desc || ""}
+        />
+      </div>
+
+      {/* Main Content Area */}
+      <div
+        style={{
+          flex: 1,
+          padding: "12px 20px 20px",
+          overflow: "hidden",
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          position: "relative",
+        }}
+      >
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          {activeLayout === "inbox" ? (
+            <InboxLayout emails={emails} selected={selected} onSelect={setSelected} />
+          ) : activeLayout === "calendar" ? (
+            <CalendarLayout emails={emails} />
+          ) : activeLayout === "kanban" ? (
+            <KanbanLayout emails={emails} />
+          ) : activeLayout === "command" ? (
+            <CommandLayout emails={emails} selected={selected} onSelect={setSelected} />
+          ) : activeLayout === "spatial" ? (
+            <SpatialLayout emails={emails} selected={selected} onSelect={setSelected} />
+          ) : activeLayout === "conversation" ? (
+            <ConversationLayout emails={emails} selected={selected} onSelect={setSelected} />
+          ) : null}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
+
+      {/* Customize Views Panel */}
+      {showPicker && (
+        <CustomizeViewsPanel
+          layouts={orderedLayouts}
+          enabledViews={enabledViews}
+          onToggleView={toggleView}
+          onReorderViews={setLayoutOrder}
+          onEnableAll={() => setEnabledViews(allIds)}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
+
+      {/* Settings Panel */}
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
   );
 }

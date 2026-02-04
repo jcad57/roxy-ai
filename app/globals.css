@@ -1,26 +1,270 @@
-@import "tailwindcss";
+/**
+ * Global Styles
+ * Base styles, animations, and responsive utilities for the email client
+ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Font size scale factor - updated dynamically by theme provider */
+  --font-scale: 1;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html {
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
+  /* Base font size */
+  font-size: 16px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Font size variants - set by data-font-size attribute */
+html[data-font-size="small"] {
+  --font-scale: 0.9;
+}
+
+html[data-font-size="medium"] {
+  --font-scale: 1;
+}
+
+html[data-font-size="large"] {
+  --font-scale: 1.1;
+}
+
+/* Apply zoom to entire body for font scaling */
+body {
+  zoom: var(--font-scale);
+  /* Fallback for Firefox which doesn't support zoom */
+  -moz-transform: scale(var(--font-scale));
+  -moz-transform-origin: 0 0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: 'SF Mono', 'Fira Code', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent text size adjustment on mobile */
+  -webkit-text-size-adjust: 100%;
+  /* Improve touch scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(236, 72, 153, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(236, 72, 153, 0.4);
+}
+
+/* Animations */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pickerIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes rainbowGlow {
+  0% {
+    border-color: #ef4444;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+  }
+  16% {
+    border-color: #f59e0b;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+  }
+  33% {
+    border-color: #eab308;
+    box-shadow: 0 0 20px rgba(234, 179, 8, 0.6);
+  }
+  50% {
+    border-color: #22c55e;
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+  }
+  66% {
+    border-color: #3b82f6;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+  }
+  83% {
+    border-color: #a855f7;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.6);
+  }
+  100% {
+    border-color: #ef4444;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+  }
+}
+
+@keyframes rainbowBorderRotate {
+  0% {
+    background: linear-gradient(90deg, #ef4444, #f59e0b, #eab308, #22c55e, #3b82f6, #a855f7, #ef4444);
+  }
+  14% {
+    background: linear-gradient(90deg, #f59e0b, #eab308, #22c55e, #3b82f6, #a855f7, #ef4444, #f59e0b);
+  }
+  28% {
+    background: linear-gradient(90deg, #eab308, #22c55e, #3b82f6, #a855f7, #ef4444, #f59e0b, #eab308);
+  }
+  42% {
+    background: linear-gradient(90deg, #22c55e, #3b82f6, #a855f7, #ef4444, #f59e0b, #eab308, #22c55e);
+  }
+  57% {
+    background: linear-gradient(90deg, #3b82f6, #a855f7, #ef4444, #f59e0b, #eab308, #22c55e, #3b82f6);
+  }
+  71% {
+    background: linear-gradient(90deg, #a855f7, #ef4444, #f59e0b, #eab308, #22c55e, #3b82f6, #a855f7);
+  }
+  85% {
+    background: linear-gradient(90deg, #ef4444, #f59e0b, #eab308, #22c55e, #3b82f6, #a855f7, #ef4444);
+  }
+  100% {
+    background: linear-gradient(90deg, #ef4444, #f59e0b, #eab308, #22c55e, #3b82f6, #a855f7, #ef4444);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Button Reset */
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Input Reset */
+input {
+  font-family: inherit;
+}
+
+input::placeholder {
+  opacity: 0.6;
+}
+
+/* Focus Styles */
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid rgba(236, 72, 153, 0.5);
+  outline-offset: 2px;
+}
+
+/* Responsive Touch Targets (Mobile) */
+@media (max-width: 768px) {
+  button {
+    min-height: 44px; /* iOS recommended touch target */
+    touch-action: manipulation; /* Prevent double-tap zoom */
+  }
+
+  /* Prevent text selection on touch */
+  * {
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Allow text selection in inputs */
+  input,
+  textarea {
+    -webkit-touch-callout: default;
+  }
+
+  /* Improve scrolling performance on mobile */
+  [style*="overflow-y: auto"],
+  [style*="overflowY: auto"] {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Tablet Adjustments */
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Tablet-specific styles if needed */
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  /* Desktop-specific enhancements */
+}
+
+/* Prevent zoom on input focus (iOS) */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  textarea {
+    font-size: 16px; /* Prevents zoom */
+  }
+}
+
+/* Hide scrollbar on mobile for cleaner look (optional) */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
 }

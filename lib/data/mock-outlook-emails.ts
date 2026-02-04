@@ -1,0 +1,165 @@
+/**
+ * Mock Outlook Emails
+ * Simulates email data as it would come from Microsoft Graph API
+ * No AI analysis - just raw email provider data
+ */
+
+import type { RawEmail } from "@/lib/types/email-raw";
+
+export const mockOutlookEmails: RawEmail[] = [
+  {
+    id: "AAMkAGE1M2IyNGNmLTI5MTktNDUyZi1iOTVl",
+    subject: "URGENT: Production deployment failed - immediate action required",
+    bodyPreview: "The production deployment for the customer portal has failed. Error logs show a database migration issue. We need to rollback immediately or fix forward. Customer-facing services are down. Meeting in 15 minutes to discuss...",
+    from: {
+      name: "DevOps Alerts",
+      address: "devops@company.com",
+    },
+    receivedDateTime: "2026-02-03T14:30:00Z",
+    isRead: false,
+    hasAttachments: false,
+    importance: "high",
+    conversationId: "thread-001",
+    flag: {
+      flagStatus: "flagged",
+    },
+  },
+  {
+    id: "AAMkAGE1M2IyNGNmLTI5MTktNDUyZi1iOTVm",
+    subject: "Q1 Board Meeting - Deck review needed by EOD",
+    bodyPreview: "Attached is the draft Q1 board deck. Please review slides 12-18 (financial projections) and the appendix. Board meets Thursday morning, so we need final approval today. Key highlights: 23% revenue growth, new enterprise deals...",
+    from: {
+      name: "Sarah Chen",
+      address: "sarah.chen@company.com",
+    },
+    receivedDateTime: "2026-02-03T13:45:00Z",
+    isRead: false,
+    hasAttachments: true,
+    importance: "high",
+    conversationId: "thread-002",
+    categories: ["Board", "Finance"],
+  },
+  {
+    id: "AAMkAGE1M2IyNGNmLTI5MTktNDUyZi1iOTVn",
+    subject: "RE: Customer feedback on new dashboard design",
+    bodyPreview: "Thanks for sharing! The feedback is mostly positive. Users love the new navigation but are confused by the analytics section. I've compiled the top 5 pain points. Should we schedule a design review session next week to iterate...",
+    from: {
+      name: "Alex Martinez",
+      address: "alex.martinez@company.com",
+    },
+    receivedDateTime: "2026-02-03T12:20:00Z",
+    isRead: false,
+    hasAttachments: false,
+    importance: "normal",
+    conversationId: "thread-003",
+    categories: ["Design", "Product"],
+  },
+  {
+    id: "AAMkAGE1M2IyNGNmLTI5MTktNDUyZi1iOTVo",
+    subject: "Partnership proposal from Microsoft - Azure credits offer",
+    bodyPreview: "Microsoft Azure team reached out with a partnership proposal. They're offering $50K in Azure credits plus co-marketing opportunities. There's a call scheduled for Friday. Need your thoughts on whether this aligns with our cloud strategy...",
+    from: {
+      name: "Jordan Lee",
+      address: "jordan.lee@company.com",
+    },
+    receivedDateTime: "2026-02-03T11:15:00Z",
+    isRead: false,
+    hasAttachments: true,
+    importance: "normal",
+    conversationId: "thread-004",
+    categories: ["Partnerships"],
+  },
+  {
+    id: "AAMkAGE1M2IyNGNmLTI5MTktNDUyZi1iOTVp",
+    subject: "Weekly Analytics Report - User growth metrics",
+    bodyPreview: "Weekly metrics summary: Active users up 12%, engagement rate at 68% (up from 64%), churn down to 3.2%. Notable spike in mobile usage. Full dashboard link below. Top performing features this week were the new onboarding flow and...",
+    from: {
+      name: "Analytics Dashboard",
+      address: "analytics@company.com",
+    },
+    receivedDateTime: "2026-02-03T09:00:00Z",
+    isRead: true,
+    hasAttachments: false,
+    importance: "low",
+    conversationId: "thread-005",
+    categories: ["Reports", "Analytics"],
+  },
+  {
+    id: "AAMkAGE1M2IyNGNmLTI5MTktNDUyZi1iOTVq",
+    subject: "Security alert: Unusual login activity detected",
+    bodyPreview: "We detected 3 failed login attempts from an unrecognized IP address (185.220.101.42) trying to access admin@company.com. The account has been temporarily locked as a precaution. Please review the activity log and confirm if this was legitimate...",
+    from: {
+      name: "Security Team",
+      address: "security@company.com",
+    },
+    receivedDateTime: "2026-02-02T16:30:00Z",
+    isRead: false,
+    hasAttachments: false,
+    importance: "high",
+    conversationId: "thread-006",
+    flag: {
+      flagStatus: "flagged",
+    },
+    categories: ["Security"],
+  },
+  {
+    id: "AAMkAGE1M2IyNGNmLTI5MTktNDUyZi1iOTVr",
+    subject: "Team lunch this Friday - Italian place downtown",
+    bodyPreview: "Hey team! Let's do lunch this Friday at that new Italian place downtown (Giovanni's). I'll make a reservation for 12:30pm. Reply if you can make it. They have great pasta and the reviews are solid. Looking forward to catching up outside...",
+    from: {
+      name: "Rachel Kim",
+      address: "rachel.kim@company.com",
+    },
+    receivedDateTime: "2026-02-02T14:20:00Z",
+    isRead: true,
+    hasAttachments: false,
+    importance: "low",
+    conversationId: "thread-007",
+    categories: ["Social"],
+  },
+  {
+    id: "AAMkAGE1M2IyNGNmLTI5MTktNDUyZi1iOTVs",
+    subject: "Invoice #2847 from Stripe - $2,450.00",
+    bodyPreview: "Your invoice for February 2026 is ready. Total: $2,450.00 USD. This includes: API usage ($1,200), Premium plan ($999), Additional seats ($251). Payment will be automatically charged to card ending in 4242 on file. View detailed breakdown...",
+    from: {
+      name: "Stripe",
+      address: "receipts@stripe.com",
+    },
+    receivedDateTime: "2026-02-02T08:00:00Z",
+    isRead: true,
+    hasAttachments: true,
+    importance: "normal",
+    conversationId: "thread-008",
+    categories: ["Finance", "Receipts"],
+  },
+  {
+    id: "AAMkAGE1M2IyNGNmLTI5MTktNDUyZi1iOTVt",
+    subject: "Marketing campaign results - Q1 social media performance",
+    bodyPreview: "Q1 social campaign wrap-up: LinkedIn posts reached 45K impressions, Twitter engagement up 28%, Instagram stories performed best with 12% click-through. Budget spent: $8,500 of $10K allocated. Recommend shifting more budget to Instagram for Q2...",
+    from: {
+      name: "Marketing Team",
+      address: "marketing@company.com",
+    },
+    receivedDateTime: "2026-02-01T15:45:00Z",
+    isRead: false,
+    hasAttachments: true,
+    importance: "normal",
+    conversationId: "thread-009",
+    categories: ["Marketing"],
+  },
+  {
+    id: "AAMkAGE1M2IyNGNmLTI5MTktNDUyZi1iOTVu",
+    subject: "GitHub: Pull request #342 needs review",
+    bodyPreview: "You've been requested to review pull request #342: 'Add user authentication middleware'. Changes include: 3 files changed, 156 additions, 42 deletions. The PR adds JWT token validation and rate limiting. Please review when you get a chance...",
+    from: {
+      name: "GitHub",
+      address: "notifications@github.com",
+    },
+    receivedDateTime: "2026-02-01T11:30:00Z",
+    isRead: true,
+    hasAttachments: false,
+    importance: "normal",
+    conversationId: "thread-010",
+    categories: ["Development"],
+  },
+];
