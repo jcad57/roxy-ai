@@ -51,14 +51,14 @@ export function isAnthropicConfigured(): boolean {
 
 /**
  * Available Claude models
- * Note: Update these model IDs based on current Anthropic API availability
- * Check: https://docs.anthropic.com/claude/docs/models-overview
+ * Updated: February 2026 - Using current active models
+ * Check: https://docs.anthropic.com/en/api/models-list
  */
 export const CLAUDE_MODELS = {
-  // Most capable model for complex tasks (using Haiku as it's currently available)
-  OPUS: "claude-3-haiku-20240307",
+  // Most capable model for complex tasks
+  OPUS: "claude-opus-4-5-20251101",
   // Balanced performance and speed 
-  SONNET: "claude-3-haiku-20240307",
+  SONNET: "claude-sonnet-4-5-20250929",
   // Fastest for simple tasks
   HAIKU: "claude-3-haiku-20240307",
 } as const;

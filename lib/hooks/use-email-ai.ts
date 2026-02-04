@@ -44,6 +44,12 @@ export function useEmailAI(emails: RawEmail[]): UseEmailAIResult {
 
       const data = await response.json();
       
+      // Save enrichments to IndexedDB (client-side only)
+      if (data.enrichments && Array.isArray(data.enrichments)) {
+        await EnrichmentDB.saveMany(data.enrichments);
+        console.log(`✅ Saved ${data.enrichments.length} AI enrichments to IndexedDB`);
+      }
+      
       // Update progress as results come in
       for (let i = 0; i < data.results.length; i++) {
         setProgress({

@@ -8,16 +8,18 @@
 import { useState, useEffect } from "react";
 import type { LayoutId } from "@/lib/types/layout";
 import { layouts } from "@/lib/constants/layouts";
-import { useTheme } from "@/lib/providers/theme-provider";
 import { useEmailData } from "@/lib/hooks/use-email-data";
-import { enrichedArrayToLegacy, sortByAIPriority } from "@/lib/adapters/email-adapter";
+import {
+  enrichedArrayToLegacy,
+  sortByAIPriority,
+} from "@/lib/adapters/email-adapter";
 
 // Load dev helpers for console access
 import "@/lib/services/storage/dev-helpers";
 
 // Layout Components
 import { InboxLayout } from "@/components/layouts/inbox-layout";
-import { CommandLayout } from "@/components/layouts/command-layout";
+import { PriorityLayout } from "@/components/layouts/priority-layout";
 import { SpatialLayout } from "@/components/layouts/spatial-layout";
 import { ConversationLayout } from "@/components/layouts/conversation-layout";
 import { CalendarLayout } from "@/components/layouts/calendar-layout";
@@ -29,15 +31,10 @@ import { LayoutSwitcher } from "@/components/ui/layout-switcher";
 import { CustomizeViewsPanel } from "@/components/ui/customize-views-panel";
 import { SettingsPanel } from "@/components/ui/settings-panel";
 import { AnalyzingIndicator } from "@/components/ui/analyzing-indicator";
-
-const layoutComponentMap: Record<LayoutId, React.ComponentType<any>> = {
-  inbox: InboxLayout,
-  command: CommandLayout,
-  spatial: SpatialLayout,
-  conversation: ConversationLayout,
-  calendar: CalendarLayout,
-  kanban: KanbanLayout,
-};
+import { ErrorBanner } from "@/components/ui/error-banner";
+import { toggleView } from "@/lib/utils/main-layout-helpers";
+import { AppLayoutWrapper } from "@/components/ui/app-layout-wrapper";
+import MainContentWrapper from "@/components/ui/main-content-wrapper";
 
 export default function EmailClientPage() {
   const allIds = layouts.map((l) => l.id);
@@ -47,34 +44,39 @@ export default function EmailClientPage() {
   const [showPicker, setShowPicker] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [selected, setSelected] = useState<any>(null);
-  const { theme } = useTheme();
-  
+
   // Email data with AI enrichment from IndexedDB
-  const { 
-    enrichedEmails,
+  const {
+    processedEmails,
+    unprocessedEmails,
     isLoading: isLoadingEmails,
-    isAnalyzing, 
-    progress, 
-    analyzedCount, 
+    isAnalyzing,
+    progress,
+    analyzedCount,
     totalToAnalyze,
+    analysisError,
+    clearError,
+    analyzeAll,
   } = useEmailData();
-  
-  // Convert to legacy Email format for existing UI components
-  const emails = sortByAIPriority(enrichedArrayToLegacy(enrichedEmails));
-  
+
+  // Convert processed emails to legacy format for display
+  // Only show emails that have been analyzed (have enrichment data)
+  const emails = sortByAIPriority(enrichedArrayToLegacy(processedEmails));
+
   // Debug logging
   useEffect(() => {
     console.log("📧 Email Data Status:");
-    console.log(`  Enriched Emails: ${enrichedEmails.length}`);
-    console.log(`  Converted Emails: ${emails.length}`);
+    console.log(`  Processed: ${processedEmails.length}`);
+    console.log(`  Unprocessed: ${unprocessedEmails.length}`);
+    console.log(`  Displaying: ${emails.length}`);
     console.log(`  Is Analyzing: ${isAnalyzing}`);
-    if (enrichedEmails.length > 0) {
-      console.log("  Sample enriched:", enrichedEmails[0]);
+    if (processedEmails.length > 0) {
+      console.log("  Sample processed:", processedEmails[0]);
     }
-    if (emails.length > 0) {
-      console.log("  Sample converted:", emails[0]);
+    if (unprocessedEmails.length > 0) {
+      console.log("  Sample unprocessed:", unprocessedEmails[0]);
     }
-  }, [enrichedEmails, emails, isAnalyzing]);
+  }, [processedEmails, unprocessedEmails, emails, isAnalyzing]);
 
   // If user disables the currently active view, jump to the first enabled one
   useEffect(() => {
@@ -94,38 +96,33 @@ export default function EmailClientPage() {
     const indexB = layoutOrder.indexOf(b.id);
     return indexA - indexB;
   });
-  
-  const visibleLayouts = orderedLayouts.filter((l) => enabledViews.includes(l.id));
-  const LayoutComponent = layoutComponentMap[activeLayout];
+
+  const visibleLayouts = orderedLayouts.filter((l) =>
+    enabledViews.includes(l.id)
+  );
+
   const currentLayout = orderedLayouts.find((l) => l.id === activeLayout);
 
-  const toggleView = (id: LayoutId) => {
-    setEnabledViews((prev) => {
-      if (prev.includes(id)) {
-        if (prev.length === 1) return prev; // always keep at least one
-        return prev.filter((v) => v !== id);
-      }
-      // Re-insert in original order
-      return allIds.filter((v) => prev.includes(v) || v === id);
-    });
-  };
-
   return (
-    <div
-      style={{
-        fontFamily: "'SF Mono', 'Fira Code', monospace",
-        background: theme.bg,
-        color: theme.textPrimary,
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
+    <AppLayoutWrapper>
       {/* Top Navigation */}
-      <NavBar emailCount={emails.length} onSettingsClick={() => setShowSettings(true)} />
-      
+      <NavBar
+        emailCount={emails.length}
+        onSettingsClick={() => setShowSettings(true)}
+      />
+
+      {/* Error Banner */}
+      {analysisError && (
+        <ErrorBanner
+          message={analysisError}
+          onDismiss={clearError}
+          onRetry={() => {
+            clearError();
+            analyzeAll();
+          }}
+        />
+      )}
+
       {/* AI Analysis Indicator */}
       {isAnalyzing && (
         <AnalyzingIndicator
@@ -137,57 +134,58 @@ export default function EmailClientPage() {
         />
       )}
 
-      <div
-        style={{
-          padding: "14px 24px",
-          flexShrink: 0,
-        }}
-      >
-        <LayoutSwitcher
-          layouts={visibleLayouts}
-          activeLayout={activeLayout}
-          onLayoutChange={setActiveLayout}
-          onCustomizeClick={() => setShowPicker(true)}
-          showCustomize={showPicker}
-          currentLayoutDesc={currentLayout?.desc || ""}
-        />
-      </div>
+      <LayoutSwitcher
+        layouts={visibleLayouts}
+        activeLayout={activeLayout}
+        onLayoutChange={setActiveLayout}
+        onCustomizeClick={() => setShowPicker(true)}
+        showCustomize={showPicker}
+        currentLayoutDesc={currentLayout?.desc || ""}
+      />
 
       {/* Main Content Area */}
-      <div
-        style={{
-          flex: 1,
-          padding: "12px 20px 20px",
-          overflow: "hidden",
-          minHeight: 0,
-          display: "flex",
-          flexDirection: "column",
-          position: "relative",
-        }}
-      >
-        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-          {activeLayout === "inbox" ? (
-            <InboxLayout emails={emails} selected={selected} onSelect={setSelected} />
-          ) : activeLayout === "calendar" ? (
-            <CalendarLayout emails={emails} />
-          ) : activeLayout === "kanban" ? (
-            <KanbanLayout emails={emails} />
-          ) : activeLayout === "command" ? (
-            <CommandLayout emails={emails} selected={selected} onSelect={setSelected} />
-          ) : activeLayout === "spatial" ? (
-            <SpatialLayout emails={emails} selected={selected} onSelect={setSelected} />
-          ) : activeLayout === "conversation" ? (
-            <ConversationLayout emails={emails} selected={selected} onSelect={setSelected} />
-          ) : null}
-        </div>
-      </div>
+      <MainContentWrapper>
+        {activeLayout === "inbox" ? (
+          <InboxLayout
+            emails={emails}
+            selected={selected}
+            onSelect={setSelected}
+            isAnalyzing={isAnalyzing}
+            unprocessedCount={unprocessedEmails.length}
+          />
+        ) : activeLayout === "calendar" ? (
+          <CalendarLayout emails={emails} />
+        ) : activeLayout === "kanban" ? (
+          <KanbanLayout emails={emails} />
+        ) : activeLayout === "priority" ? (
+          <PriorityLayout
+            emails={emails}
+            selected={selected}
+            onSelect={setSelected}
+            isAnalyzing={isAnalyzing}
+            unprocessedCount={unprocessedEmails.length}
+          />
+        ) : activeLayout === "spatial" ? (
+          <SpatialLayout
+            emails={emails}
+            selected={selected}
+            onSelect={setSelected}
+          />
+        ) : activeLayout === "conversation" ? (
+          <ConversationLayout
+            emails={emails}
+            selected={selected}
+            onSelect={setSelected}
+          />
+        ) : null}
+      </MainContentWrapper>
 
       {/* Customize Views Panel */}
       {showPicker && (
         <CustomizeViewsPanel
           layouts={orderedLayouts}
           enabledViews={enabledViews}
-          onToggleView={toggleView}
+          onToggleView={(id) => toggleView(id, allIds, setEnabledViews)}
           onReorderViews={setLayoutOrder}
           onEnableAll={() => setEnabledViews(allIds)}
           onClose={() => setShowPicker(false)}
@@ -196,6 +194,6 @@ export default function EmailClientPage() {
 
       {/* Settings Panel */}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
-    </div>
+    </AppLayoutWrapper>
   );
 }

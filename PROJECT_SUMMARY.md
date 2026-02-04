@@ -5,8 +5,9 @@
 A complete, professional-grade AI-powered email client with:
 
 ### 🎨 **6 Innovative Layout Views**
+
 1. **Timeline** - AI-prioritized feed with action suggestions
-2. **Command** - Dashboard with metrics, clusters, and KPIs
+2. **Priority** - Dashboard with metrics, clusters, and KPIs
 3. **Spatial** - Visual 2D canvas with cluster grouping
 4. **Threads** - AI-grouped conversations with summaries
 5. **Calendar** - Auto-extracted deadlines and meetings timeline
@@ -15,38 +16,47 @@ A complete, professional-grade AI-powered email client with:
 ### 🏗️ **Professional Architecture**
 
 #### Type Safety (TypeScript)
+
 - `lib/types/email.ts` - Email, AI suggestions, calendar events, todos
 - `lib/types/layout.ts` - Layout configurations and props
 
 #### Constants & Configuration
+
 - `lib/constants/theme.ts` - Centralized design system
 - `lib/constants/layouts.ts` - Layout definitions and Kanban defaults
 
 #### Mock Data (for demonstration)
+
 - `lib/data/mock-emails.ts` - 10 realistic emails
 - `lib/data/mock-ai-suggestions.ts` - AI-generated actions
 - `lib/data/mock-calendar.ts` - Extracted calendar events
 - `lib/data/mock-kanban.ts` - Task board items
 
 #### Utility Functions
+
 - `lib/utils/colors.ts` - Priority colors, tag colors
 
 #### Layout Components (6 files)
+
 Each implementing a unique view paradigm:
+
 - `components/layouts/timeline-layout.tsx`
-- `components/layouts/command-layout.tsx`
+- `components/layouts/priority-layout.tsx`
 - `components/layouts/spatial-layout.tsx`
 - `components/layouts/conversation-layout.tsx`
 - `components/layouts/calendar-layout.tsx`
 - `components/layouts/kanban-layout.tsx`
 
 #### UI Components (3 files)
+
 Reusable interface elements:
+
 - `components/ui/nav-bar.tsx` - Top navigation
 - `components/ui/layout-switcher.tsx` - View mode tabs
 - `components/ui/customize-views-panel.tsx` - Settings panel
 
 #### App Structure
+
 - `app/page.tsx` - Main orchestrator (manages state, routing)
 - `app/layout.tsx` - Root layout with metadata
 - `app/globals.css` - Styles and animations
@@ -63,11 +73,13 @@ Reusable interface elements:
 ## 🎯 Design Principles Applied
 
 ### 1. **Single Responsibility**
+
 - Each file has one clear purpose
 - Components are focused and testable
 - Utilities are pure functions
 
 ### 2. **Separation of Concerns**
+
 ```
 Data Layer      → lib/data/
 Business Logic  → lib/utils/
@@ -78,18 +90,21 @@ App Structure  → app/
 ```
 
 ### 3. **Type Safety**
+
 - Full TypeScript coverage
 - Explicit interfaces
 - No implicit `any` types
 - Proper prop typing
 
 ### 4. **Scalability**
+
 - Modular architecture
 - Easy to add new layouts
 - Pluggable data sources
 - Extensible component system
 
 ### 5. **Code Quality**
+
 - Consistent naming conventions
 - Self-documenting code
 - Inline documentation
@@ -98,6 +113,7 @@ App Structure  → app/
 ## 🚀 Ready to Use
 
 The app is fully functional with:
+
 - ✅ View switching between 6 layouts
 - ✅ Email selection and detail views
 - ✅ AI priority sorting
@@ -120,16 +136,19 @@ The app is fully functional with:
 ## 📝 Next Steps (Future Development)
 
 1. **Email Provider Integration**
+
    - OAuth for Gmail, Outlook, etc.
    - Real-time email sync
    - Send/reply functionality
 
 2. **AI Backend**
+
    - Priority scoring algorithm
    - Clustering ML model
    - NLP for event extraction
 
 3. **Database Layer**
+
    - User preferences storage
    - Email caching
    - Custom configurations
@@ -174,18 +193,21 @@ npm start
 ## ✨ Highlights
 
 ### Code Quality
+
 - **Zero technical debt** - Professional-grade code from the start
 - **Maintainable** - Clear structure, easy to navigate
 - **Extensible** - Simple to add features
 - **Type-safe** - Catches errors at compile time
 
 ### User Experience
+
 - **Beautiful UI** - Modern, polished interface
 - **Fast** - Optimized rendering and state management
 - **Intuitive** - Clear navigation and interactions
 - **Innovative** - Unique view paradigms
 
 ### Engineering
+
 - **Best Practices** - Follows industry standards
 - **Clean Code** - Readable and well-organized
 - **Scalable** - Ready to grow with features

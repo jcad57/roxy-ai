@@ -4,8 +4,9 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "RoxyAI - AI-Powered Email Client",
-  description: "A beautiful, AI-powered email client that organizes your inbox with intelligent clustering, priority sorting, and multiple innovative views.",
-  manifest: "/manifest.json",
+  description:
+    "A beautiful, AI-powered email client that organizes your inbox with intelligent clustering, priority sorting, and multiple innovative views.",
+  // manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

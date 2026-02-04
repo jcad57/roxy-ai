@@ -14,7 +14,7 @@ export const layouts: Layout[] = [
     desc: "Traditional email client with smart features. Browse all emails in a familiar Gmail-style interface with custom categories.",
   },
   {
-    id: "command",
+    id: "priority",
     label: "Priority",
     icon: "◎",
     desc: "AI-prioritized email list. Work through your inbox efficiently by priority, responding to the most important messages first.",
@@ -46,8 +46,32 @@ export const layouts: Layout[] = [
 ];
 
 export const defaultKanbanColumns: KanbanColumn[] = [
-  { id: "backlog", label: "Backlog", icon: "○", color: "#64748b", desc: "Not yet started" },
-  { id: "inprogress", label: "In Progress", icon: "◐", color: theme.accent, desc: "Currently working on" },
-  { id: "inreview", label: "In Review", icon: "◎", color: "#f59e0b", desc: "Awaiting review or feedback" },
-  { id: "completed", label: "Completed", icon: "✓", color: "#22c55e", desc: "Done" },
+  {
+    id: "backlog",
+    label: "Backlog",
+    icon: "○",
+    color: "#64748b",
+    desc: "Not yet started",
+  },
+  {
+    id: "inprogress",
+    label: "In Progress",
+    icon: "◐",
+    color: theme.accent,
+    desc: "Currently working on",
+  },
+  {
+    id: "inreview",
+    label: "In Review",
+    icon: "◎",
+    color: "#f59e0b",
+    desc: "Awaiting review or feedback",
+  },
+  {
+    id: "completed",
+    label: "Completed",
+    icon: "✓",
+    color: "#22c55e",
+    desc: "Done",
+  },
 ];

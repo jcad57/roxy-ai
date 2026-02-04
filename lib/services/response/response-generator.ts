@@ -14,9 +14,9 @@ import type {
 import { generateTemplateResponse, generateQuickReplyTemplates } from './response-templates';
 
 const HAIKU_MODEL = 'claude-3-haiku-20240307';
-const SONNET_MODEL = 'claude-3-5-sonnet-20241022';
+const SONNET_MODEL = 'claude-sonnet-4-5-20250929'; // Updated to active model (Feb 2026)
 
-// Cost per 1M tokens
+// Cost per 1M tokens (as of 2026)
 const COSTS = {
   haiku: { input: 0.25, output: 1.25 },
   sonnet: { input: 3.00, output: 15.00 },

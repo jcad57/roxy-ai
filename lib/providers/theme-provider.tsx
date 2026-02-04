@@ -6,8 +6,13 @@
  */
 
 import { createContext, useContext, ReactNode, useEffect } from "react";
-import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
-import type { ThemeName, ColorPalette } from "@/lib/types/theme";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+  useMutation,
+} from "@tanstack/react-query";
+import type { ThemeName, ColorPalette, FontSize } from "@/lib/types/theme";
 import { getThemePalette, defaultTheme } from "@/lib/constants/theme-palettes";
 
 // Create Query Client
@@ -19,8 +24,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-export type FontSize = "small" | "medium" | "large";
 
 // Theme Context
 interface ThemeContextValue {
@@ -42,7 +45,7 @@ const FONT_SIZE_STORAGE_KEY = "mailmind-font-size";
 // Get theme from localStorage or default
 function getStoredTheme(): ThemeName {
   if (typeof window === "undefined") return defaultTheme;
-  
+
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
     if (stored) {
@@ -51,21 +54,24 @@ function getStoredTheme(): ThemeName {
       if (parsed.mode) {
         return parsed.mode as ThemeName;
       }
-      if (typeof parsed === "string" && (parsed === "light" || parsed === "dark")) {
+      if (
+        typeof parsed === "string" &&
+        (parsed === "light" || parsed === "dark")
+      ) {
         return parsed;
       }
     }
   } catch (error) {
     console.error("Error loading theme from storage:", error);
   }
-  
+
   return defaultTheme;
 }
 
 // Get font size from localStorage or default
 function getStoredFontSize(): FontSize {
   if (typeof window === "undefined") return "medium";
-  
+
   try {
     const stored = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
     if (stored) {
@@ -77,14 +83,14 @@ function getStoredFontSize(): FontSize {
   } catch (error) {
     console.error("Error loading font size from storage:", error);
   }
-  
+
   return "medium";
 }
 
 // Save theme to localStorage
 function saveTheme(themeName: ThemeName): void {
   if (typeof window === "undefined") return;
-  
+
   try {
     localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(themeName));
   } catch (error) {
@@ -95,7 +101,7 @@ function saveTheme(themeName: ThemeName): void {
 // Save font size to localStorage
 function saveFontSize(fontSize: FontSize): void {
   if (typeof window === "undefined") return;
-  
+
   try {
     localStorage.setItem(FONT_SIZE_STORAGE_KEY, JSON.stringify(fontSize));
   } catch (error) {
@@ -146,11 +152,11 @@ function ThemeProviderInner({ children }: { children: ReactNode }) {
   // Apply theme and font size to document
   useEffect(() => {
     if (typeof window === "undefined") return;
-    
+
     // Set data attributes for CSS
     document.documentElement.setAttribute("data-theme", themeName);
     document.documentElement.setAttribute("data-font-size", fontSize);
-    
+
     // Set meta theme-color
     const palette = getThemePalette(themeName);
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
@@ -160,7 +166,7 @@ function ThemeProviderInner({ children }: { children: ReactNode }) {
   }, [themeName, fontSize]);
 
   const theme = getThemePalette(themeName);
-  
+
   const value: ThemeContextValue = {
     theme,
     themeName,
@@ -171,7 +177,9 @@ function ThemeProviderInner({ children }: { children: ReactNode }) {
     isDark: themeName === "dark",
   };
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 
 // Main Provider with Query Client

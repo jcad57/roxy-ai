@@ -28,9 +28,14 @@ export function LayoutSwitcher({
 }: LayoutSwitcherProps) {
   const { theme } = useTheme();
   const { breakpoint, isMobile } = useResponsive();
-  
+
   return (
-    <div>
+    <div
+      style={{
+        padding: "14px 24px",
+        flexShrink: 0,
+      }}
+    >
       {/* Layout Switcher Row */}
       <div
         style={{
@@ -52,7 +57,9 @@ export function LayoutSwitcher({
               minWidth: isMobile ? 65 : 80,
               maxWidth: isMobile ? "none" : "25%",
               background:
-                activeLayout === layout.id ? theme.accentDimBorder : theme.bgCard,
+                activeLayout === layout.id
+                  ? theme.accentDimBorder
+                  : theme.bgCard,
               border:
                 activeLayout === layout.id
                   ? `1px solid ${theme.accentDimBorder}`
@@ -69,7 +76,10 @@ export function LayoutSwitcher({
               style={{
                 fontSize: isMobile ? 12 : 14,
                 marginBottom: 2,
-                color: activeLayout === layout.id ? theme.accentLight : theme.textDim,
+                color:
+                  activeLayout === layout.id
+                    ? theme.accentLight
+                    : theme.textDim,
               }}
             >
               {layout.icon}
@@ -77,7 +87,10 @@ export function LayoutSwitcher({
             <div
               style={{
                 fontSize: isMobile ? 8 : 9,
-                color: activeLayout === layout.id ? theme.accentLight : theme.textDim,
+                color:
+                  activeLayout === layout.id
+                    ? theme.accentLight
+                    : theme.textDim,
                 fontWeight: activeLayout === layout.id ? 600 : 400,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
@@ -98,8 +111,12 @@ export function LayoutSwitcher({
             height: isMobile ? 34 : 38,
             borderRadius: isMobile ? 8 : 10,
             flexShrink: 0,
-            background: showCustomize ? theme.accentDimBorder : "rgba(15,23,42,0.45)",
-            border: `1px solid ${showCustomize ? theme.accentDimBorder : theme.borderMuted}`,
+            background: showCustomize
+              ? theme.accentDimBorder
+              : "rgba(15,23,42,0.45)",
+            border: `1px solid ${
+              showCustomize ? theme.accentDimBorder : theme.borderMuted
+            }`,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",

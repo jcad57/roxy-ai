@@ -5,7 +5,6 @@
 
 import { NextResponse } from 'next/server';
 import { smartAnalyze, estimateCost } from '@/lib/services/ai/enhanced-email-analyzer';
-import { EnrichmentDB } from '@/lib/services/storage/indexeddb';
 import type { RawEmail, EmailAIEnrichment } from '@/lib/types/email-raw';
 
 export const maxDuration = 300; // 5 minutes for batch processing
@@ -26,7 +25,8 @@ export async function POST(request: Request) {
     // Perform smart analysis
     const results = await smartAnalyze(emails);
 
-    // Save enrichments to IndexedDB
+    // Format enrichments for client-side storage
+    // Note: Client is responsible for saving to IndexedDB
     const enrichments: EmailAIEnrichment[] = results.map(r => ({
       emailId: r.emailId,
       aiPriority: r.analysis.priority,
@@ -45,14 +45,13 @@ export async function POST(request: Request) {
       model: r.analysis.model,
     }));
 
-    await EnrichmentDB.saveMany(enrichments);
-
     // Calculate cost estimate
     const cost = estimateCost(emails.length);
 
     return NextResponse.json({
       success: true,
       results,
+      enrichments, // Return enrichments for client to save
       processedCount: results.length,
       estimatedCost: cost.smart,
     });

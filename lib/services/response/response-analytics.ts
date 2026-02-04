@@ -3,9 +3,9 @@
  * Track usage and costs
  */
 
-import type { ResponseAnalyticsEntry } from '@/lib/types/response';
+import type { ResponseAnalyticsEntry } from "@/lib/types/response";
 
-const ANALYTICS_KEY = 'mailmind-response-analytics-v1';
+const ANALYTICS_KEY = "roxyai-response-analytics-v1";
 
 export const ResponseAnalytics = {
   /**
@@ -19,7 +19,7 @@ export const ResponseAnalytics = {
   ): void {
     try {
       const log: ResponseAnalyticsEntry[] = JSON.parse(
-        localStorage.getItem(ANALYTICS_KEY) || '[]'
+        localStorage.getItem(ANALYTICS_KEY) || "[]"
       );
 
       log.push({
@@ -37,7 +37,7 @@ export const ResponseAnalytics = {
 
       localStorage.setItem(ANALYTICS_KEY, JSON.stringify(log));
     } catch (error) {
-      console.error('Error logging analytics:', error);
+      console.error("Error logging analytics:", error);
     }
   },
 
@@ -53,14 +53,14 @@ export const ResponseAnalytics = {
   } {
     try {
       const log: ResponseAnalyticsEntry[] = JSON.parse(
-        localStorage.getItem(ANALYTICS_KEY) || '[]'
+        localStorage.getItem(ANALYTICS_KEY) || "[]"
       );
 
       const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const last7Days = log.filter(entry => entry.timestamp > sevenDaysAgo);
+      const last7Days = log.filter((entry) => entry.timestamp > sevenDaysAgo);
 
       const byModel: Record<string, number> = {};
-      log.forEach(entry => {
+      log.forEach((entry) => {
         byModel[entry.model] = (byModel[entry.model] || 0) + 1;
       });
 
@@ -69,12 +69,15 @@ export const ResponseAnalytics = {
       return {
         totalGenerated: log.length,
         totalCost: Math.round(totalCost * 10000) / 10000,
-        avgCost: log.length > 0 ? Math.round((totalCost / log.length) * 10000) / 10000 : 0,
+        avgCost:
+          log.length > 0
+            ? Math.round((totalCost / log.length) * 10000) / 10000
+            : 0,
         byModel,
         last7Days,
       };
     } catch (error) {
-      console.error('Error getting analytics:', error);
+      console.error("Error getting analytics:", error);
       return {
         totalGenerated: 0,
         totalCost: 0,
@@ -90,15 +93,15 @@ export const ResponseAnalytics = {
    */
   clear(): void {
     localStorage.removeItem(ANALYTICS_KEY);
-    console.log('🗑️  Cleared response analytics');
+    console.log("🗑️  Cleared response analytics");
   },
 };
 
 // Add to dev helpers
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   (window as any).showResponseAnalytics = () => {
     const stats = ResponseAnalytics.getStats();
-    console.log('📊 Response Generation Analytics:');
+    console.log("📊 Response Generation Analytics:");
     console.log(`  Total generated: ${stats.totalGenerated}`);
     console.log(`  Total cost: $${stats.totalCost.toFixed(4)}`);
     console.log(`  Avg cost: $${stats.avgCost.toFixed(4)}`);
@@ -107,6 +110,8 @@ if (typeof window !== 'undefined') {
     return stats;
   };
 
-  console.log('💡 Response Analytics Helper:');
-  console.log('  - window.showResponseAnalytics() - Show response generation stats');
+  console.log("💡 Response Analytics Helper:");
+  console.log(
+    "  - window.showResponseAnalytics() - Show response generation stats"
+  );
 }

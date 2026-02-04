@@ -2,21 +2,28 @@
  * Email Data Hook
  * Manages emails using React Query + IndexedDB
  * Handles AI enrichment separately from raw email data
+ * 
+ * Flow:
+ * 1. Load emails from IndexedDB
+ * 2. Separate processed (has enrichment) vs unprocessed (needs analysis)
+ * 3. Show processed emails immediately
+ * 4. Show skeletons for unprocessed emails
+ * 5. Trigger AI analysis for unprocessed emails
+ * 6. Save enrichments to IndexedDB
+ * 7. Update UI with analyzed emails
  */
 
-import { useState, useEffect, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { RawEmail, EnrichedEmail, EmailAIEnrichment } from "@/lib/types/email-raw";
 import { 
   initializeEmails,
   getEnrichedEmails,
   getEmailsNeedingAnalysis,
-  saveEnrichment,
   clearAIEnrichments,
 } from "@/lib/services/email-service";
+import { EnrichmentDB } from "@/lib/services/storage/indexeddb";
 import { mockOutlookEmails } from "@/lib/data/mock-outlook-emails";
-
-// Removed - now using smart-analyze API endpoint
 
 /**
  * Main hook to manage email data with AI enrichment
@@ -27,6 +34,8 @@ export function useEmailData() {
   const [analyzedCount, setAnalyzedCount] = useState(0);
   const [totalToAnalyze, setTotalToAnalyze] = useState(0);
   const [hasInitializedAnalysis, setHasInitializedAnalysis] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [emailsBeingAnalyzed, setEmailsBeingAnalyzed] = useState<Set<string>>(new Set());
 
   // Initialize email database on mount
   useEffect(() => {
@@ -54,24 +63,24 @@ export function useEmailData() {
     refetchOnReconnect: false,
   });
 
-  // Derive raw emails from enriched for analysis
-  const rawEmails = enrichedEmails.map(({ enrichment, ...raw }) => raw as RawEmail);
+  // Separate processed vs unprocessed emails
+  const { processedEmails, unprocessedEmails } = useMemo(() => {
+    const processed: EnrichedEmail[] = [];
+    const unprocessed: EnrichedEmail[] = [];
 
-  // Mutation: Save AI enrichment to IndexedDB
-  const enrichmentMutation = useMutation({
-    mutationFn: async (enrichment: EmailAIEnrichment) => {
-      await saveEnrichment(enrichment);
-      return enrichment;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enrichedEmails"] });
-    },
-  });
+    enrichedEmails.forEach((email) => {
+      if (email.enrichment) {
+        processed.push(email);
+      } else {
+        unprocessed.push(email);
+      }
+    });
 
-  // Removed - now using batch smart analysis
+    return { processedEmails: processed, unprocessedEmails: unprocessed };
+  }, [enrichedEmails]);
 
   /**
-   * Analyze all emails using smart two-pass approach
+   * Analyze unprocessed emails using smart two-pass approach
    */
   const analyzeAll = useCallback(async (): Promise<void> => {
     if (isAnalyzing) {
@@ -82,7 +91,8 @@ export function useEmailData() {
     const emailsToAnalyze = await getEmailsNeedingAnalysis();
 
     console.log(`📧 Email Analysis Check:`);
-    console.log(`  Total emails: ${rawEmails.length}`);
+    console.log(`  Total emails: ${enrichedEmails.length}`);
+    console.log(`  Processed: ${processedEmails.length}`);
     console.log(`  Need analysis: ${emailsToAnalyze.length}`);
 
     if (emailsToAnalyze.length === 0) {
@@ -93,6 +103,10 @@ export function useEmailData() {
     setIsAnalyzing(true);
     setTotalToAnalyze(emailsToAnalyze.length);
     setAnalyzedCount(0);
+    setAnalysisError(null);
+    
+    // Mark emails as being analyzed
+    setEmailsBeingAnalyzed(new Set(emailsToAnalyze.map(e => e.id)));
 
     console.log(`🤖 Starting smart AI analysis of ${emailsToAnalyze.length} emails...`);
 
@@ -105,24 +119,38 @@ export function useEmailData() {
       });
 
       if (!response.ok) {
-        throw new Error(`Analysis failed: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Analysis failed: ${response.statusText}`);
       }
 
       const data = await response.json();
       
+      // CRITICAL: Save enrichments to IndexedDB
+      if (data.enrichments && Array.isArray(data.enrichments)) {
+        console.log(`💾 Saving ${data.enrichments.length} enrichments to IndexedDB...`);
+        await EnrichmentDB.saveMany(data.enrichments);
+        console.log(`✅ Enrichments saved successfully`);
+      } else {
+        console.warn("⚠️  No enrichments returned from API");
+      }
+      
       // Update progress
       setAnalyzedCount(data.processedCount);
       
-      // Invalidate queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ["enrichedEmails"] });
+      // Invalidate queries to refresh UI with new enrichments
+      await queryClient.invalidateQueries({ queryKey: ["enrichedEmails"] });
 
-      console.log(`✅ AI analysis complete! Cost: $${data.estimatedCost.toFixed(4)}`);
+      console.log(`✅ AI analysis complete! Cost: $${data.estimatedCost?.toFixed(4) || 'N/A'}`);
+      setEmailsBeingAnalyzed(new Set());
     } catch (error) {
-      console.error("❌ AI analysis failed:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      console.error("❌ AI analysis failed:", errorMessage);
+      setAnalysisError(errorMessage);
+      setEmailsBeingAnalyzed(new Set());
     } finally {
       setIsAnalyzing(false);
     }
-  }, [isAnalyzing, rawEmails.length, queryClient]);
+  }, [isAnalyzing, enrichedEmails.length, processedEmails.length, queryClient]);
 
   /**
    * Force re-analyze all emails (ignore cache)
@@ -134,25 +162,49 @@ export function useEmailData() {
   }, [analyzeAll]);
 
   /**
-   * Auto-analyze when raw emails are loaded (only once)
+   * Auto-analyze when emails are loaded (only once)
    */
   useEffect(() => {
-    if (rawEmails.length > 0 && !hasInitializedAnalysis && !isAnalyzing) {
-      console.log("🤖 Triggering initial auto-analysis for", rawEmails.length, "emails");
+    if (enrichedEmails.length > 0 && !hasInitializedAnalysis && !isAnalyzing) {
+      console.log("🤖 Triggering initial auto-analysis...");
+      console.log(`  Total emails: ${enrichedEmails.length}`);
+      console.log(`  Already processed: ${processedEmails.length}`);
+      console.log(`  Need processing: ${unprocessedEmails.length}`);
+      
       setHasInitializedAnalysis(true);
-      analyzeAll();
+      
+      // Only analyze if there are unprocessed emails
+      if (unprocessedEmails.length > 0) {
+        analyzeAll();
+      }
     }
-  }, [rawEmails.length]); // Only depend on rawEmails.length to prevent infinite loops
+  }, [enrichedEmails.length, hasInitializedAnalysis, isAnalyzing]); // Only trigger when emails load
 
   const progress = totalToAnalyze > 0 ? Math.round((analyzedCount / totalToAnalyze) * 100) : 0;
 
   return {
+    // All emails (mixed processed and unprocessed)
     enrichedEmails,
+    
+    // Separated by processing state
+    processedEmails,
+    unprocessedEmails,
+    
+    // Loading states
     isLoading: isLoadingEmails,
     isAnalyzing,
+    emailsBeingAnalyzed,
+    
+    // Progress tracking
     analyzedCount,
     totalToAnalyze,
     progress,
+    
+    // Error handling
+    analysisError,
+    clearError: () => setAnalysisError(null),
+    
+    // Actions
     analyzeAll,
     refresh,
   };

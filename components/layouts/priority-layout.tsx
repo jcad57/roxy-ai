@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Priority Layout (formerly Command)
+ * Priority Layout
  * AI-prioritized email list for efficient inbox processing
  */
 
@@ -11,18 +11,41 @@ import type { LayoutProps } from "@/lib/types/layout";
 import { useTheme } from "@/lib/providers/theme-provider";
 import { priorityColor } from "@/lib/utils/colors";
 import { useResponsive } from "@/lib/hooks/use-responsive";
-import { responsivePadding, responsiveGap } from "@/lib/utils/responsive-styles";
+import {
+  responsivePadding,
+  responsiveGap,
+} from "@/lib/utils/responsive-styles";
 import { useEmailData } from "@/lib/hooks/use-email-data";
 import { useResponseSuggestion } from "@/lib/hooks/use-response-suggestion";
 import { ResponseCache } from "@/lib/services/response/response-cache";
 import { ResponseSuggestionPanel } from "@/components/ui/response-suggestion-panel";
 import { QuickReplyBar } from "@/components/ui/quick-reply-bar";
+import { EmailSkeleton } from "@/components/ui/email-skeleton";
 
 type PriorityFilter = "all" | "high" | "medium" | "low";
 
-export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { emails: Email[] }) {
+interface PriorityLayoutProps extends LayoutProps {
+  emails: Email[];
+  isAnalyzing?: boolean;
+  unprocessedCount?: number;
+}
+
+export function PriorityLayout({
+  emails,
+  selected,
+  onSelect,
+  isAnalyzing = false,
+  unprocessedCount = 0,
+}: PriorityLayoutProps) {
   const urgent = emails.filter((e) => e.priority >= 70);
-  const clusters: EmailCluster[] = ["operations", "content", "partnerships", "analytics", "finance", "other"];
+  const clusters: EmailCluster[] = [
+    "operations",
+    "content",
+    "partnerships",
+    "analytics",
+    "finance",
+    "other",
+  ];
   const [activeCluster, setActiveCluster] = useState<EmailCluster | null>(null);
   const [activePriority, setActivePriority] = useState<PriorityFilter>("all");
   const [replyText, setReplyText] = useState("");
@@ -31,12 +54,15 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
   const { theme } = useTheme();
   const { breakpoint, isMobile, isTablet } = useResponsive();
   const { enrichedEmails } = useEmailData();
-  
+
   // Find enriched version of selected email
   const selectedEnrichedEmail = selected
-    ? enrichedEmails.find((e) => parseInt(e.id.substring(e.id.length - 8), 36) % 10000 === selected.id)
+    ? enrichedEmails.find(
+        (e) =>
+          parseInt(e.id.substring(e.id.length - 8), 36) % 10000 === selected.id
+      )
     : null;
-  
+
   // Response suggestion hook
   const {
     suggestion,
@@ -46,16 +72,18 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
     regenerate,
     generateQuick,
   } = useResponseSuggestion(selectedEnrichedEmail || ({} as any));
-  
+
   // Auto-generate for high-priority emails (only once per email)
   useEffect(() => {
     if (selected && selected.priority >= 80 && selectedEnrichedEmail) {
       // Use consistent cache key format
       const cacheKey = `quick_reply_${selectedEnrichedEmail.id}`;
       const cached = ResponseCache.get(cacheKey);
-      
-      console.log(`📧 Selected email ${selected.id} (priority: ${selected.priority})`);
-      
+
+      console.log(
+        `📧 Selected email ${selected.id} (priority: ${selected.priority})`
+      );
+
       if (!cached) {
         console.log(`   🔄 No cache found, triggering generation...`);
         generateQuick();
@@ -68,8 +96,10 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
   }, [selected?.id]);
 
   // Filter by cluster
-  let filtered = activeCluster ? emails.filter((e) => e.cluster === activeCluster) : emails;
-  
+  let filtered = activeCluster
+    ? emails.filter((e) => e.cluster === activeCluster)
+    : emails;
+
   // Filter by priority
   if (activePriority === "high") {
     filtered = filtered.filter((e) => e.priority >= 80);
@@ -78,7 +108,7 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
   } else if (activePriority === "low") {
     filtered = filtered.filter((e) => e.priority < 50);
   }
-  
+
   const sorted = [...filtered].sort((a, b) => b.priority - a.priority);
 
   return (
@@ -86,7 +116,11 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
       style={{
         display: isMobile ? "flex" : "grid",
         flexDirection: isMobile ? "column" : undefined,
-        gridTemplateColumns: isMobile ? "1fr" : isTablet ? "180px 1fr" : "200px 1fr 1fr",
+        gridTemplateColumns: isMobile
+          ? "1fr"
+          : isTablet
+          ? "180px 1fr"
+          : "200px 1fr 1fr",
         gridTemplateRows: isMobile ? "auto" : "auto 1fr",
         gap: responsiveGap(breakpoint),
         height: "100%",
@@ -98,20 +132,39 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
         style={{
           gridColumn: "1 / -1",
           display: "grid",
-          gridTemplateColumns: isMobile ? "1fr 1fr" : isTablet ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+          gridTemplateColumns: isMobile
+            ? "1fr 1fr"
+            : isTablet
+            ? "repeat(2, 1fr)"
+            : "repeat(4, 1fr)",
           gap: isMobile ? 8 : 10,
         }}
       >
         {[
-          { label: "High Priority", val: urgent.length, color: "#f43f5e", bg: "rgba(244,63,94,0.1)" },
+          {
+            label: "High Priority",
+            val: urgent.length,
+            color: "#f43f5e",
+            bg: "rgba(244,63,94,0.1)",
+          },
           {
             label: "Unread",
             val: emails.filter((e) => !e.read).length,
             color: theme.accentLight,
             bg: theme.accentDimBorder,
           },
-          { label: "Total Emails", val: emails.length, color: "#22c55e", bg: "rgba(34,197,94,0.1)" },
-          { label: "Read", val: emails.filter((e) => e.read).length, color: "#3b82f6", bg: "rgba(59,130,246,0.1)" },
+          {
+            label: "Total Emails",
+            val: emails.length,
+            color: "#22c55e",
+            bg: "rgba(34,197,94,0.1)",
+          },
+          {
+            label: "Read",
+            val: emails.filter((e) => e.read).length,
+            color: "#3b82f6",
+            bg: "rgba(59,130,246,0.1)",
+          },
         ].map((kpi) => (
           <div
             key={kpi.label}
@@ -122,7 +175,15 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
               border: `1px solid ${kpi.color}20`,
             }}
           >
-            <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, color: kpi.color }}>{kpi.val}</div>
+            <div
+              style={{
+                fontSize: isMobile ? 18 : 22,
+                fontWeight: 800,
+                color: kpi.color,
+              }}
+            >
+              {kpi.val}
+            </div>
             <div
               style={{
                 fontSize: isMobile ? 9 : 10.5,
@@ -177,7 +238,9 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
                 cursor: "pointer",
                 transition: "all 0.15s",
                 background: active ? theme.accentDimBorder : "transparent",
-                border: active ? `1px solid ${theme.accentDimBorder}` : "1px solid transparent",
+                border: active
+                  ? `1px solid ${theme.accentDimBorder}`
+                  : "1px solid transparent",
               }}
             >
               <span
@@ -221,10 +284,31 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
             Priority Level
           </div>
           {[
-            { id: "all", label: "All", color: theme.textMuted, count: emails.length },
-            { id: "high", label: "High", color: "#f43f5e", count: emails.filter(e => e.priority >= 80).length },
-            { id: "medium", label: "Medium", color: "#f59e0b", count: emails.filter(e => e.priority >= 50 && e.priority < 80).length },
-            { id: "low", label: "Low", color: "#22c55e", count: emails.filter(e => e.priority < 50).length },
+            {
+              id: "all",
+              label: "All",
+              color: theme.textMuted,
+              count: emails.length,
+            },
+            {
+              id: "high",
+              label: "High",
+              color: "#f43f5e",
+              count: emails.filter((e) => e.priority >= 80).length,
+            },
+            {
+              id: "medium",
+              label: "Medium",
+              color: "#f59e0b",
+              count: emails.filter((e) => e.priority >= 50 && e.priority < 80)
+                .length,
+            },
+            {
+              id: "low",
+              label: "Low",
+              color: "#22c55e",
+              count: emails.filter((e) => e.priority < 50).length,
+            },
           ].map((priority) => {
             const active = activePriority === priority.id;
             return (
@@ -240,7 +324,9 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
                   cursor: "pointer",
                   transition: "all 0.15s",
                   background: active ? `${priority.color}15` : "transparent",
-                  border: active ? `1px solid ${priority.color}40` : "1px solid transparent",
+                  border: active
+                    ? `1px solid ${priority.color}40`
+                    : "1px solid transparent",
                   marginBottom: 3,
                 }}
               >
@@ -302,8 +388,8 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
             marginBottom: 4,
           }}
         >
-          {activeCluster 
-            ? `${activeCluster} — ${sorted.length}` 
+          {activeCluster
+            ? `${activeCluster} — ${sorted.length}`
             : activePriority !== "all"
             ? `${activePriority} priority — ${sorted.length}`
             : `All emails — ${sorted.length}`}
@@ -317,9 +403,12 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
               borderRadius: 10,
               cursor: "pointer",
               transition: "all 0.15s",
-              background: selected?.id === email.id ? theme.accentGlow : theme.bgCard,
+              background:
+                selected?.id === email.id ? theme.accentGlow : theme.bgCard,
               border:
-                selected?.id === email.id ? `1px solid ${theme.accentDimBorder}` : `1px solid ${theme.borderMuted}`,
+                selected?.id === email.id
+                  ? `1px solid ${theme.accentDimBorder}`
+                  : `1px solid ${theme.borderMuted}`,
               animation: `fadeSlideIn 0.3s ease ${i * 30}ms both`,
             }}
           >
@@ -331,7 +420,15 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
                 marginBottom: 4,
               }}
             >
-              <span style={{ fontSize: 12, fontWeight: 600, color: theme.textPrimary }}>{email.from}</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: theme.textPrimary,
+                }}
+              >
+                {email.from}
+              </span>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <div
                   style={{
@@ -341,7 +438,9 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
                     background: priorityColor(email.priority),
                   }}
                 />
-                <span style={{ fontSize: 9.5, color: theme.textDim }}>{email.priority}</span>
+                <span style={{ fontSize: 9.5, color: theme.textDim }}>
+                  {email.priority}
+                </span>
               </div>
             </div>
             <div
@@ -357,12 +456,26 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
             </div>
           </div>
         ))}
+
+        {/* Skeleton loaders for emails being analyzed */}
+        {isAnalyzing && unprocessedCount > 0 && (
+          <EmailSkeleton
+            count={Math.min(unprocessedCount, 3)}
+            variant="priority"
+          />
+        )}
       </div>
 
       {/* Email Detail */}
       <div style={{ overflowY: "auto", position: "relative" }}>
         {selected ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 10 : 12 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: isMobile ? 10 : 12,
+            }}
+          >
             {/* Back Button on Mobile */}
             {isMobile && (
               <button
@@ -392,10 +505,23 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
                 border: `1px solid ${theme.borderMuted}`,
               }}
             >
-              <div style={{ fontSize: 16, fontWeight: 700, color: theme.textPrimary, marginBottom: 4 }}>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: theme.textPrimary,
+                  marginBottom: 4,
+                }}
+              >
                 {selected.subject}
               </div>
-              <div style={{ fontSize: 11.5, color: theme.textDim, marginBottom: 10 }}>
+              <div
+                style={{
+                  fontSize: 11.5,
+                  color: theme.textDim,
+                  marginBottom: 10,
+                }}
+              >
                 {selected.from} · {selected.time}
               </div>
               {/* Context Pills */}
@@ -451,9 +577,11 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
                 border: `1px solid ${theme.borderMuted}`,
               }}
             >
-              {selected.preview} Lorem ipsum dolor sit amet, consectetur adipiscing elit. This is the full email content that would be displayed here.
+              {selected.preview} Lorem ipsum dolor sit amet, consectetur
+              adipiscing elit. This is the full email content that would be
+              displayed here.
             </div>
-            
+
             {/* AI Response System - Only show when reply box is hidden */}
             {!showReplyBox && (
               <>
@@ -467,14 +595,12 @@ export function CommandLayout({ emails, selected, onSelect }: LayoutProps & { em
                       setShowReplyBox(true);
                     }}
                     onWriteCustom={() => {
-                      setReplyText('');
+                      setReplyText("");
                       setShowReplyBox(true);
                     }}
                   />
                 )}
-                
-                
-                
+
                 {/* AI Response Suggestion Panel */}
                 {showAISuggestion && selectedEnrichedEmail && (
                   <ResponseSuggestionPanel

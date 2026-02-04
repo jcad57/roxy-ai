@@ -3,7 +3,13 @@
  * Types for the different view modes
  */
 
-export type LayoutId = "inbox" | "command" | "spatial" | "conversation" | "calendar" | "kanban";
+export type LayoutId =
+  | "inbox"
+  | "priority"
+  | "spatial"
+  | "conversation"
+  | "calendar"
+  | "kanban";
 
 export interface Layout {
   id: LayoutId;
@@ -15,6 +21,8 @@ export interface Layout {
 export interface LayoutProps {
   selected: any;
   onSelect: (item: any) => void;
+  isAnalyzing?: boolean;
+  unprocessedCount?: number;
 }
 
 export interface KanbanColumn {
