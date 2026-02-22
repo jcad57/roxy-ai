@@ -14,6 +14,115 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      email_metadata: {
+        Row: {
+          id: string
+          user_id: string
+          outlook_message_id: string
+          subject: string
+          from_name: string
+          from_address: string
+          received_at: string
+          conversation_id: string | null
+          is_read: boolean
+          has_attachments: boolean
+          importance: 'low' | 'normal' | 'high'
+          ai_status: 'pending' | 'processing' | 'enriched' | 'failed' | 'skipped'
+          ai_retry_count: number
+          ai_last_error: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          outlook_message_id: string
+          subject: string
+          from_name: string
+          from_address: string
+          received_at: string
+          conversation_id?: string | null
+          is_read?: boolean
+          has_attachments?: boolean
+          importance?: 'low' | 'normal' | 'high'
+          ai_status?: 'pending' | 'processing' | 'enriched' | 'failed' | 'skipped'
+          ai_retry_count?: number
+          ai_last_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          outlook_message_id?: string
+          subject?: string
+          from_name?: string
+          from_address?: string
+          received_at?: string
+          conversation_id?: string | null
+          is_read?: boolean
+          has_attachments?: boolean
+          importance?: 'low' | 'normal' | 'high'
+          ai_status?: 'pending' | 'processing' | 'enriched' | 'failed' | 'skipped'
+          ai_retry_count?: number
+          ai_last_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      outlook_connections: {
+        Row: {
+          id: string
+          user_id: string
+          outlook_email: string
+          outlook_user_id: string
+          outlook_display_name: string | null
+          connected_at: string
+          last_sync_at: string | null
+          delta_link: string | null
+          sync_status: 'active' | 'disconnected' | 'error'
+          total_emails_synced: number
+          last_sync_email_count: number
+          last_error: string | null
+          last_error_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          outlook_email: string
+          outlook_user_id: string
+          outlook_display_name?: string | null
+          connected_at?: string
+          last_sync_at?: string | null
+          delta_link?: string | null
+          sync_status?: 'active' | 'disconnected' | 'error'
+          total_emails_synced?: number
+          last_sync_email_count?: number
+          last_error?: string | null
+          last_error_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          outlook_email?: string
+          outlook_user_id?: string
+          outlook_display_name?: string | null
+          connected_at?: string
+          last_sync_at?: string | null
+          delta_link?: string | null
+          sync_status?: 'active' | 'disconnected' | 'error'
+          total_emails_synced?: number
+          last_sync_email_count?: number
+          last_error?: string | null
+          last_error_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       profiles: {
         Row: {
           id: string
@@ -141,6 +250,7 @@ export interface Database {
           id: string
           user_id: string
           email_id: string
+          outlook_message_id: string | null
           ai_priority: number | null
           priority_reason: string | null
           summary: string | null
@@ -162,6 +272,7 @@ export interface Database {
           id?: string
           user_id: string
           email_id: string
+          outlook_message_id?: string | null
           ai_priority?: number | null
           priority_reason?: string | null
           summary?: string | null
@@ -183,6 +294,7 @@ export interface Database {
           id?: string
           user_id?: string
           email_id?: string
+          outlook_message_id?: string | null
           ai_priority?: number | null
           priority_reason?: string | null
           summary?: string | null

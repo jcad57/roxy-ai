@@ -5,15 +5,15 @@
  * Orchestrates all layout views and UI components
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { LayoutId } from "@/lib/types/layout";
 import { layouts } from "@/lib/constants/layouts";
-import { useEmailData } from "@/lib/hooks/use-email-data";
+import { useEmailMetadata } from "@/lib/hooks/use-email-metadata";
 import { useViewPreferences } from "@/lib/hooks/use-view-preferences";
-import {
-  enrichedArrayToLegacy,
-  sortByAIPriority,
-} from "@/lib/adapters/email-adapter";
+import { useOutlookConnection } from "@/lib/hooks/use-outlook-connection";
+import { useEmailSync } from "@/lib/hooks/use-email-sync";
+import { useEmailEnrichment } from "@/lib/hooks/use-email-enrichment";
+import { sortByAIPriority } from "@/lib/adapters/email-adapter";
 
 // Load dev helpers for console access
 import "@/lib/services/storage/dev-helpers";
@@ -31,15 +31,46 @@ import { NavBar } from "@/components/ui/nav-bar";
 import { LayoutSwitcher } from "@/components/ui/layout-switcher";
 import { CustomizeViewsPanel } from "@/components/ui/customize-views-panel";
 import { SettingsPanel } from "@/components/ui/settings-panel";
-import { AnalyzingIndicator } from "@/components/ui/analyzing-indicator";
 import { ErrorBanner } from "@/components/ui/error-banner";
 import { ProtectedRoute } from "@/components/auth/protected-route";
+import { ConnectOutlookPrompt } from "@/components/ui/connect-outlook-prompt";
+import { EmailLoadingSkeleton } from "@/components/ui/email-loading-skeleton";
+import { AutoSyncToast } from "@/components/ui/auto-sync-toast";
 import { toggleView } from "@/lib/utils/main-layout-helpers";
 import { AppLayoutWrapper } from "@/components/ui/app-layout-wrapper";
 import MainContentWrapper from "@/components/ui/main-content-wrapper";
 
 function EmailClient() {
   const allIds = layouts.map((l) => l.id);
+
+  // Check Outlook connection status
+  const { isConnected, isLoadingConnection } = useOutlookConnection();
+
+  // Enable auto-sync when connected (3-minute intervals)
+  const { lastSyncResult } = useEmailSync({
+    autoSync: isConnected,
+    autoSyncInterval: 3 * 60 * 1000, // 3 minutes
+  });
+
+  // Separate auto-analysis effect (prevents infinite loop)
+  const { analyze, isAnalyzing } = useEmailEnrichment();
+  const lastProcessedSyncRef = useRef<string | null>(null);
+  
+  useEffect(() => {
+    // Only trigger AI analysis if sync completed with new emails
+    // Track sync timestamp to prevent duplicate triggers on same sync
+    if (
+      lastSyncResult && 
+      lastSyncResult.newEmails > 0 && 
+      !isAnalyzing && 
+      lastSyncResult.timestamp &&
+      lastProcessedSyncRef.current !== lastSyncResult.timestamp
+    ) {
+      console.log(`🤖 Auto-triggering AI analysis for ${lastSyncResult.newEmails} new emails (sync: ${lastSyncResult.timestamp})`);
+      lastProcessedSyncRef.current = lastSyncResult.timestamp;
+      analyze({ batchSize: lastSyncResult.newEmails });
+    }
+  }, [lastSyncResult?.timestamp, lastSyncResult?.newEmails, isAnalyzing]); // Only depend on stable values
 
   // Supabase view preferences
   const {
@@ -74,38 +105,19 @@ function EmailClient() {
     }
   }, [viewPreferences]);
 
-  // Email data with AI enrichment from IndexedDB
+  // Email metadata from Supabase (no IndexedDB, no mock data)
   const {
+    emails: emailsFromMetadata,
     processedEmails,
     unprocessedEmails,
     isLoading: isLoadingEmails,
-    isAnalyzing,
-    progress,
-    analyzedCount,
-    totalToAnalyze,
-    analysisError,
-    clearError,
-    analyzeAll,
-  } = useEmailData();
+    error: emailsError,
+  } = useEmailMetadata();
 
-  // Convert processed emails to legacy format for display
-  // Only show emails that have been analyzed (have enrichment data)
-  const emails = sortByAIPriority(enrichedArrayToLegacy(processedEmails));
+  // Sort emails by AI priority
+  const emails = sortByAIPriority(emailsFromMetadata);
 
-  // Debug logging
-  useEffect(() => {
-    console.log("📧 Email Data Status:");
-    console.log(`  Processed: ${processedEmails.length}`);
-    console.log(`  Unprocessed: ${unprocessedEmails.length}`);
-    console.log(`  Displaying: ${emails.length}`);
-    console.log(`  Is Analyzing: ${isAnalyzing}`);
-    if (processedEmails.length > 0) {
-      console.log("  Sample processed:", processedEmails[0]);
-    }
-    if (unprocessedEmails.length > 0) {
-      console.log("  Sample unprocessed:", unprocessedEmails[0]);
-    }
-  }, [processedEmails, unprocessedEmails, emails, isAnalyzing]);
+  // Removed excessive debug logging - causes console spam
 
   // If user disables the currently active view, jump to the first enabled one
   useEffect(() => {
@@ -194,6 +206,16 @@ function EmailClient() {
 
   const currentLayout = orderedLayouts.find((l) => l.id === activeLayout);
 
+  // Show loading while checking connection or loading emails
+  if (isLoadingConnection || isLoadingEmails) {
+    return <EmailLoadingSkeleton fullPage />;
+  }
+
+  // Show connect prompt if Outlook not connected
+  if (!isConnected) {
+    return <ConnectOutlookPrompt />;
+  }
+
   return (
     <AppLayoutWrapper>
       {/* Top Navigation */}
@@ -203,25 +225,11 @@ function EmailClient() {
       />
 
       {/* Error Banner */}
-      {analysisError && (
+      {emailsError && (
         <ErrorBanner
-          message={analysisError}
-          onDismiss={clearError}
-          onRetry={() => {
-            clearError();
-            analyzeAll();
-          }}
-        />
-      )}
-
-      {/* AI Analysis Indicator */}
-      {isAnalyzing && (
-        <AnalyzingIndicator
-          progress={{
-            current: analyzedCount,
-            total: totalToAnalyze,
-            percentage: progress,
-          }}
+          message={emailsError instanceof Error ? emailsError.message : 'Failed to load emails'}
+          onDismiss={() => {}}
+          onRetry={() => window.location.reload()}
         />
       )}
 
@@ -241,8 +249,6 @@ function EmailClient() {
             emails={emails}
             selected={selected}
             onSelect={setSelected}
-            isAnalyzing={isAnalyzing}
-            unprocessedCount={unprocessedEmails.length}
           />
         ) : activeLayout === "calendar" ? (
           <CalendarLayout emails={emails} />
@@ -253,8 +259,6 @@ function EmailClient() {
             emails={emails}
             selected={selected}
             onSelect={setSelected}
-            isAnalyzing={isAnalyzing}
-            unprocessedCount={unprocessedEmails.length}
           />
         ) : activeLayout === "spatial" ? (
           <SpatialLayout
@@ -285,6 +289,9 @@ function EmailClient() {
 
       {/* Settings Panel */}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+
+      {/* Auto-Sync Toast Notification */}
+      <AutoSyncToast />
     </AppLayoutWrapper>
   );
 }

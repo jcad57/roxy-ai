@@ -71,10 +71,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error) throw error;
     
-    router.push('/');
+    console.log('✅ Account created successfully');
+    
+    // Route directly to Outlook connection (no email confirmation)
+    router.push('/connect-outlook');
   };
 
   const signOut = async () => {
+    // Import dynamically to avoid SSR issues
+    const { emailBodyCache } = await import('@/lib/services/email-body-cache');
+    
+    // Clear in-memory email body cache
+    emailBodyCache.clear();
+    console.log('🧹 Email body cache cleared on logout');
+    
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     

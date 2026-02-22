@@ -7,6 +7,7 @@
 
 import { useTheme } from "@/lib/providers/theme-provider";
 import { priorityColor } from "@/lib/utils/colors";
+import { useEmailActions } from "@/lib/hooks/use-email-actions";
 import type { Email } from "@/lib/types/email";
 
 interface PriorityEmailItemProps {
@@ -23,10 +24,32 @@ export function PriorityEmailItem({
   onSelect,
 }: PriorityEmailItemProps) {
   const { theme } = useTheme();
+  const { markAsRead } = useEmailActions();
+
+  const handleEmailClick = () => {
+    console.log(`📧 Priority email clicked:`, {
+      subject: email.subject,
+      from: email.from,
+      isRead: email.read,
+      outlookMessageId: email.outlookMessageId,
+    });
+    
+    onSelect(email);
+    
+    // Mark as read when opening (Outlook-style behavior)
+    if (!email.read && email.outlookMessageId) {
+      console.log(`📨 Marking priority email as read: ${email.outlookMessageId}`);
+      markAsRead([email.outlookMessageId]);
+    } else if (!email.read) {
+      console.warn(`⚠️ Cannot mark as read - missing outlookMessageId`);
+    } else {
+      console.log(`ℹ️ Email already read, skipping mark-as-read`);
+    }
+  };
 
   return (
     <div
-      onClick={() => onSelect(email)}
+      onClick={handleEmailClick}
       style={{
         padding: "10px 12px",
         borderRadius: 10,

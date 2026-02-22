@@ -13,13 +13,15 @@ import type {
   KeyDate,
 } from "@/lib/types/ai-analysis";
 
-const HAIKU_MODEL = "claude-3-haiku-20240307";
-const SONNET_MODEL = "claude-sonnet-4-5-20250929"; // Updated to active model (Feb 2026)
+// Claude Haiku 4.5 - Latest fast model with near-frontier intelligence
+const HAIKU_MODEL = "claude-haiku-4-5-20251001";
+// Claude Sonnet 4.6 - Best combination of speed and intelligence
+const SONNET_MODEL = "claude-sonnet-4-6";
 
-// Cost per 1M tokens (as of 2026)
+// Cost per 1M tokens (as of Feb 2026)
 const COSTS = {
-  haiku: { input: 0.25, output: 1.25 },
-  sonnet: { input: 3.0, output: 15.0 },
+  haiku: { input: 1.0, output: 5.0 },  // Haiku 4.5 pricing
+  sonnet: { input: 3.0, output: 15.0 }, // Sonnet 4.6 pricing
 };
 
 let client: Anthropic | null = null;

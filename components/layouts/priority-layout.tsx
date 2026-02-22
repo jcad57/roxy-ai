@@ -13,11 +13,10 @@ import type { Email, EmailCluster } from "@/lib/types/email";
 import type { LayoutProps } from "@/lib/types/layout";
 import { useTheme } from "@/lib/providers/theme-provider";
 import { useResponsive } from "@/lib/hooks/use-responsive";
+import { useEmailPrefetch } from "@/lib/hooks/use-email-prefetch";
 import { responsiveGap } from "@/lib/utils/responsive-styles";
-import { useEmailData } from "@/lib/hooks/use-email-data";
 import { useResponseSuggestion } from "@/lib/hooks/use-response-suggestion";
 import { ResponseCache } from "@/lib/services/response/response-cache";
-import { EmailSkeleton } from "@/components/ui/email-skeleton";
 import {
   usePriorityStore,
   type PriorityFilter,
@@ -29,34 +28,24 @@ import { ClustersSidebar } from "../ui/priority-view/clusters-sidebar";
 import { PriorityEmailItem } from "../ui/priority-view/priority-email-item";
 import { EmailDetailPanel } from "../ui/priority-view/email-detail-panel";
 import { EmptySelectionState } from "../ui/priority-view/empty-selection-state";
+import { EmptyInboxState } from "../ui/empty-inbox-state";
 
 interface PriorityLayoutProps extends LayoutProps {
   emails: Email[];
-  isAnalyzing?: boolean;
-  unprocessedCount?: number;
 }
 
 export function PriorityLayout({
   emails,
   selected,
   onSelect,
-  isAnalyzing = false,
-  unprocessedCount = 0,
 }: PriorityLayoutProps) {
+  // Prefetch email bodies in background
+  const { isPrefetching } = useEmailPrefetch(emails, true);
   const { theme } = useTheme();
   const { breakpoint, isMobile, isTablet } = useResponsive();
-  const { enrichedEmails } = useEmailData();
 
   // === ZUSTAND STORE STATE ===
   const { activeCluster, activePriority } = usePriorityStore();
-
-  // === ENRICHED EMAIL LOOKUP ===
-  const selectedEnrichedEmail = selected
-    ? enrichedEmails.find(
-        (e) =>
-          parseInt(e.id.substring(e.id.length - 8), 36) % 10000 === selected.id
-      )
-    : null;
 
   // === AI RESPONSE SUGGESTION ===
   const {
@@ -66,16 +55,16 @@ export function PriorityLayout({
     generate,
     regenerate,
     generateQuick,
-  } = useResponseSuggestion(selectedEnrichedEmail || ({} as any));
+  } = useResponseSuggestion(selected || ({} as any));
 
   // === AUTO-GENERATE FOR HIGH-PRIORITY EMAILS ===
   useEffect(() => {
-    if (selected && selected.priority >= 70 && selectedEnrichedEmail) {
-      const cacheKey = `quick_reply_${selectedEnrichedEmail.id}`;
+    if (selected && selected.priority >= 70) {
+      const cacheKey = `quick_reply_${selected.id}`;
       const cached = ResponseCache.get(cacheKey);
 
       console.log(
-        `📧 Selected email ${selected.id} (priority: ${selected.priority})`
+        `📧 Selected email ${selected.id} (priority: ${selected.priority})`,
       );
 
       if (!cached) {
@@ -86,7 +75,7 @@ export function PriorityLayout({
         generateQuick();
       }
     }
-  }, [selected?.id, selectedEnrichedEmail, generateQuick]);
+  }, [selected?.id, generateQuick]);
 
   // === CLUSTERS ===
   const clusters: EmailCluster[] = [
@@ -122,8 +111,8 @@ export function PriorityLayout({
         gridTemplateColumns: isMobile
           ? "1fr"
           : isTablet
-          ? "180px 1fr"
-          : "200px 1fr 1fr",
+            ? "180px 1fr"
+            : "200px 1fr 1fr",
         gridTemplateRows: isMobile ? "auto" : "auto 1fr",
         gap: responsiveGap(breakpoint),
         height: "100%",
@@ -170,26 +159,24 @@ export function PriorityLayout({
           {activeCluster
             ? `${activeCluster} — ${sorted.length}`
             : activePriority !== "all"
-            ? `${activePriority} priority — ${sorted.length}`
-            : `All emails — ${sorted.length}`}
+              ? `${activePriority} priority — ${sorted.length}`
+              : `All emails — ${sorted.length}`}
         </div>
 
-        {sorted.map((email, i) => (
-          <PriorityEmailItem
-            key={email.id}
-            email={email}
-            isSelected={selected?.id === email.id}
-            index={i}
-            onSelect={onSelect}
-          />
-        ))}
-
-        {/* Skeleton loaders for emails being analyzed */}
-        {isAnalyzing && unprocessedCount > 0 && (
-          <EmailSkeleton
-            count={Math.min(unprocessedCount, 3)}
-            variant="priority"
-          />
+        {sorted.length === 0 ? (
+          <div style={{ padding: 20 }}>
+            <EmptyInboxState />
+          </div>
+        ) : (
+          sorted.map((email, i) => (
+            <PriorityEmailItem
+              key={email.id}
+              email={email}
+              isSelected={selected?.id === email.id}
+              index={i}
+              onSelect={onSelect}
+            />
+          ))
         )}
       </div>
 
@@ -198,7 +185,6 @@ export function PriorityLayout({
         {selected ? (
           <EmailDetailPanel
             selectedEmail={selected}
-            selectedEnrichedEmail={selectedEnrichedEmail}
             quickReplies={quickReplies}
             generating={generating}
             suggestion={suggestion}

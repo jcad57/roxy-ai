@@ -10,12 +10,11 @@
  */
 
 import type { InboxLayoutProps } from "@/lib/types/email";
-import { useEmailData } from "@/lib/hooks/use-email-data";
 import { useResponseSuggestion } from "@/lib/hooks/use-response-suggestion";
 import { useContextTags } from "@/lib/hooks/use-context-tags";
 import { useInboxStore } from "@/lib/stores/inbox-store";
+import { useEmailPrefetch } from "@/lib/hooks/use-email-prefetch";
 import { ResponseSuggestionPanel } from "@/components/ui/response-suggestion-panel";
-import { EmailSkeleton } from "@/components/ui/email-skeleton";
 import { getCategoryTabs } from "@/lib/utils/inbox-view-helpers";
 import { useTheme } from "@/lib/providers/theme-provider";
 
@@ -26,16 +25,13 @@ import { CategoryTabBar } from "../ui/inbox-view/category-tab-bar";
 import { EmailListItem } from "../ui/inbox-view/email-list-item";
 import { NewCategoryPanel } from "../ui/inbox-view/new-category-panel";
 import { EmailThreadPanel } from "../ui/inbox-view/email-thread-panel";
+import { EmptyInboxState } from "../ui/empty-inbox-state";
 
-export function InboxLayout({
-  emails,
-  selected,
-  onSelect,
-  isAnalyzing = false,
-  unprocessedCount = 0,
-}: InboxLayoutProps) {
+export function InboxLayout({ emails, selected, onSelect }: InboxLayoutProps) {
   const { theme } = useTheme();
-  const { enrichedEmails } = useEmailData();
+  
+  // Prefetch email bodies in background (Gmail-style instant open)
+  const { isPrefetching } = useEmailPrefetch(emails, true);
 
   // === ZUSTAND STORE STATE ===
   const {
@@ -59,15 +55,6 @@ export function InboxLayout({
     isCreatingCategory,
   } = useContextTags(emails);
 
-  // === ENRICHED EMAIL LOOKUP ===
-  const selectedEnrichedEmail = selectedEmail
-    ? enrichedEmails.find(
-        (e) =>
-          parseInt(e.id.substring(e.id.length - 8), 36) % 10000 ===
-          selectedEmail.id
-      )
-    : null;
-
   // === AI RESPONSE SUGGESTION ===
   const {
     suggestion,
@@ -76,7 +63,7 @@ export function InboxLayout({
     generate,
     regenerate,
     generateQuick,
-  } = useResponseSuggestion(selectedEnrichedEmail || ({} as any));
+  } = useResponseSuggestion(selectedEmail || ({} as any));
 
   // === CATEGORY TABS ===
   const categoryTabs = getCategoryTabs(customCategories);
@@ -96,14 +83,17 @@ export function InboxLayout({
         return currentTab.tags.some(
           (tabTag: string) =>
             normalizedEmailTag === tabTag ||
-            normalizedEmailTag === tabTag.toLowerCase()
+            normalizedEmailTag === tabTag.toLowerCase(),
         );
-      })
+      }),
     );
   }
 
   // === SORT EMAILS (NEWEST FIRST) ===
-  const sortedEmails = [...filteredEmails].sort((a, b) => b.id - a.id);
+  // Sort by actual received timestamp, not by ID (which is a hash)
+  const sortedEmails = [...filteredEmails].sort((a, b) => 
+    new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
+  );
 
   // === CREATE CATEGORY HANDLER ===
   const handleCreateCategory = async () => {
@@ -198,16 +188,12 @@ export function InboxLayout({
                 padding: "0",
               }}
             >
-              {sortedEmails.map((email) => (
-                <EmailListItem key={email.id} email={email} />
-              ))}
-
-              {/* Skeleton loaders for emails being analyzed */}
-              {isAnalyzing && unprocessedCount > 0 && (
-                <EmailSkeleton
-                  count={Math.min(unprocessedCount, 3)}
-                  variant="inbox"
-                />
+              {sortedEmails.length === 0 ? (
+                <EmptyInboxState />
+              ) : (
+                sortedEmails.map((email) => (
+                  <EmailListItem key={email.id * Math.random()} email={email} />
+                ))
               )}
             </div>
           </div>
@@ -230,7 +216,7 @@ export function InboxLayout({
       )}
 
       {/* === AI RESPONSE SUGGESTION PANEL === */}
-      {showResponsePanel && selectedEnrichedEmail && (
+      {showResponsePanel && selectedEmail && (
         <ResponseSuggestionPanel
           suggestion={suggestion}
           generating={generating}

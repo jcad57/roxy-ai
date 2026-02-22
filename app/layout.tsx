@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "@/lib/providers/theme-provider";
 import { AuthProvider } from "@/lib/providers/auth-provider";
+import { OutlookAuthProvider } from "@/lib/providers/outlook-auth-provider";
+import { QueryProvider } from "@/lib/providers/query-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -34,9 +36,13 @@ export default function RootLayout({
         <meta name="theme-color" content="#0f172a" />
       </head>
       <body style={{ margin: 0, padding: 0 }}>
-        <AuthProvider>
-          <ThemeProvider>{children}</ThemeProvider>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <OutlookAuthProvider>
+              <ThemeProvider>{children}</ThemeProvider>
+            </OutlookAuthProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

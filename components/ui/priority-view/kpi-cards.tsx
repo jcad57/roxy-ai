@@ -17,7 +17,7 @@ export function KPICards({ emails }: KPICardsProps) {
   const { theme } = useTheme();
   const { isMobile, isTablet } = useResponsive();
 
-  const urgent = emails.filter((e) => e.priority >= 70);
+  const urgent = emails.filter((e) => e.priority >= 85);
 
   const kpis = [
     {
@@ -54,8 +54,8 @@ export function KPICards({ emails }: KPICardsProps) {
         gridTemplateColumns: isMobile
           ? "1fr 1fr"
           : isTablet
-          ? "repeat(2, 1fr)"
-          : "repeat(4, 1fr)",
+            ? "repeat(2, 1fr)"
+            : "repeat(4, 1fr)",
         gap: isMobile ? 8 : 10,
       }}
     >

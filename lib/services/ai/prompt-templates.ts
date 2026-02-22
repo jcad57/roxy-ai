@@ -30,7 +30,7 @@ PREVIEW: ${email.preview}
 CURRENT PRIORITY: ${email.priority}
 
 Consider:
-- Urgency indicators (deadlines, time-sensitive language)
+- Urgency indicators (deadlines, time-sensitive language, punctuation, etc.)
 - Sender importance
 - Action requirements
 - Business impact
@@ -56,7 +56,10 @@ Respond with ONLY one word: positive, negative, or neutral`;
  */
 export function generateActionItemsPrompt(emails: Email[]): string {
   const emailList = emails
-    .map((e, i) => `${i + 1}. FROM: ${e.from}\n   SUBJECT: ${e.subject}\n   PREVIEW: ${e.preview}`)
+    .map(
+      (e, i) =>
+        `${i + 1}. FROM: ${e.from}\n   SUBJECT: ${e.subject}\n   PREVIEW: ${e.preview}`,
+    )
     .join("\n\n");
 
   return `Analyze these emails and extract the top 3 most important action items:
@@ -122,9 +125,7 @@ If there are no calendar events, respond with an empty array: []`;
  * Generate a prompt for email summary
  */
 export function generateSummaryPrompt(emails: Email[]): string {
-  const emailList = emails
-    .map((e) => `• ${e.from}: ${e.subject}`)
-    .join("\n");
+  const emailList = emails.map((e) => `• ${e.from}: ${e.subject}`).join("\n");
 
   return `Provide a brief summary of these ${emails.length} emails in 2-3 sentences:
 

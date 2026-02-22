@@ -39,6 +39,13 @@ export function enrichedToLegacyEmail(enriched: EnrichedEmail): Email {
     timeStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
 
+  // Format date consistently
+  const dateStr = date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
+  });
+
   // Use AI enrichment if available, otherwise defaults
   const priority = enriched.enrichment?.aiPriority ?? 50;
   const sentiment: EmailSentiment = enriched.enrichment?.aiSentiment ?? "neutral";
@@ -58,6 +65,8 @@ export function enrichedToLegacyEmail(enriched: EnrichedEmail): Email {
     subject: enriched.subject,
     preview: enriched.bodyPreview,
     time: timeStr,
+    date: dateStr,
+    receivedAt: enriched.receivedDateTime,
     priority,
     category,
     tags, // Now using AI-generated tags

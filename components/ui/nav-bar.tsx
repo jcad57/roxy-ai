@@ -8,6 +8,10 @@
 import { useTheme } from "@/lib/providers/theme-provider";
 import { useResponsive } from "@/lib/hooks/use-responsive";
 import { responsivePadding } from "@/lib/utils/responsive-styles";
+import { SyncButton } from "./sync-button";
+import { AnalyzeButton } from "./analyze-button";
+import { SyncStatusIndicator } from "./sync-status-indicator";
+import { DeleteAccountButton } from "./delete-account-button";
 
 interface NavBarProps {
   emailCount: number;
@@ -79,6 +83,10 @@ export function NavBar({ emailCount, onSettingsClick }: NavBarProps) {
           >
             ◎ AI active · {emailCount} emails
           </div>
+          <SyncStatusIndicator />
+          <SyncButton />
+          <AnalyzeButton />
+          <DeleteAccountButton />
           <button
             onClick={onSettingsClick}
             style={{

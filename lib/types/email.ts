@@ -29,6 +29,8 @@ export interface Email {
   subject: string;
   preview: string;
   time: string;
+  date: string;
+  receivedAt: string;
   priority: number;
   category: EmailCategory;
   tags: string[];
@@ -36,6 +38,7 @@ export interface Email {
   read: boolean;
   sentiment: EmailSentiment;
   thread: number;
+  outlookMessageId?: string; // For on-demand content fetching
 }
 
 export interface CategoryTab {
@@ -47,8 +50,6 @@ export interface CategoryTab {
 
 export interface InboxLayoutProps extends LayoutProps {
   emails: Email[];
-  isAnalyzing?: boolean;
-  unprocessedCount?: number;
 }
 export interface AISuggestion {
   text: string;

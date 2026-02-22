@@ -3,11 +3,13 @@
 /**
  * Email Thread Panel Component
  * Displays email thread with full conversation history
- * Outlook-style detail view
+ * Outlook-style detail view with real email content
  */
 
 import { useTheme } from "@/lib/providers/theme-provider";
 import { useInboxStore } from "@/lib/stores/inbox-store";
+import { useEmailContent } from "@/lib/hooks/use-email-content";
+import { useEmailActions } from "@/lib/hooks/use-email-actions";
 import type { Email } from "@/lib/types/email";
 import { EmailThreadMessage } from "./email-thread-message";
 import { EmailThreadActions } from "./email-thread-actions";
@@ -21,35 +23,71 @@ export function EmailThreadPanel({ email }: EmailThreadPanelProps) {
   const closeEmailThreadPanel = useInboxStore(
     (state) => state.closeEmailThreadPanel
   );
+  const { markAsUnread } = useEmailActions();
 
-  // Mock thread data - in real app, this would come from API/database
-  const threadMessages = [
-    {
+  const handleMarkUnread = () => {
+    console.log(`📧 Mark as Unread clicked in thread panel`);
+    console.log(`   Email:`, { subject: email.subject, outlookMessageId: email.outlookMessageId });
+    
+    if (email.outlookMessageId) {
+      console.log(`📨 Calling markAsUnread...`);
+      markAsUnread([email.outlookMessageId]);
+    } else {
+      console.warn(`⚠️ Cannot mark as unread - missing outlookMessageId`);
+    }
+  };
+
+  // Fetch real email content on-demand
+  const { data: emailContent, isLoading, error } = useEmailContent(
+    (email as any).outlookMessageId || null,
+    true
+  );
+
+  // Prepare thread messages from real content
+  const threadMessages = [];
+
+  if (emailContent) {
+    // Main email message with full body
+    threadMessages.push({
+      id: emailContent.outlookMessageId,
+      from: emailContent.from.name || emailContent.from.address,
+      to: emailContent.to.map(t => t.name || t.address).join(', ') || 'You',
+      subject: emailContent.subject,
+      time: new Date(emailContent.receivedDateTime).toLocaleString(),
+      content: emailContent.body.contentType === 'html' 
+        ? stripHtml(emailContent.body.content) 
+        : emailContent.body.content,
+      avatar: (emailContent.from.name || 'U')[0].toUpperCase(),
+      isRead: true,
+      hasAttachments: emailContent.hasAttachments,
+      attachments: emailContent.attachments || [],
+    });
+  } else if (!isLoading && !error) {
+    // Fallback to preview if content not yet loaded
+    threadMessages.push({
       id: `${email.id}-1`,
       from: email.from,
       to: "You",
       subject: email.subject,
       time: email.time,
-      content: `${email.preview}\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.\n\nBest regards,\n${email.from}`,
+      content: email.preview || '(No preview available)',
       avatar: email.avatar,
       isRead: email.read,
-    },
-  ];
+    });
+  }
 
-  // If email has thread count > 1, add more messages
-  if (email.thread > 1) {
-    for (let i = 2; i <= Math.min(email.thread, 5); i++) {
-      threadMessages.push({
-        id: `${email.id}-${i}`,
-        from: i % 2 === 0 ? "You" : email.from,
-        to: i % 2 === 0 ? email.from : "You",
-        subject: `Re: ${email.subject}`,
-        time: `${i}h ago`,
-        content: `This is message ${i} in the thread.\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit.`,
-        avatar: i % 2 === 0 ? "Y" : email.avatar,
-        isRead: true,
-      });
-    }
+  // Helper function to strip HTML tags for preview
+  function stripHtml(html: string): string {
+    return html
+      .replace(/<style[^>]*>.*?<\/style>/gi, '')
+      .replace(/<script[^>]*>.*?<\/script>/gi, '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .trim();
   }
 
   return (
@@ -101,32 +139,62 @@ export function EmailThreadPanel({ email }: EmailThreadPanelProps) {
           )}
         </div>
 
-        {/* Close Button */}
-        <button
-          onClick={closeEmailThreadPanel}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: theme.textMuted,
-            cursor: "pointer",
-            fontSize: 20,
-            padding: "4px 8px",
-            marginLeft: 12,
-            transition: "all 0.15s",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = theme.textPrimary;
-            e.currentTarget.style.background = theme.borderMuted;
-            e.currentTarget.style.borderRadius = "6px";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = theme.textMuted;
-            e.currentTarget.style.background = "transparent";
-          }}
-          title="Close"
-        >
-          ✕
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* Mark as Unread Button */}
+          {email.read && email.outlookMessageId && (
+            <button
+              onClick={handleMarkUnread}
+              style={{
+                background: "transparent",
+                border: `1px solid ${theme.borderMuted}`,
+                color: theme.textMuted,
+                cursor: "pointer",
+                fontSize: 11,
+                padding: "6px 12px",
+                borderRadius: 6,
+                transition: "all 0.15s",
+                fontWeight: 500,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = theme.textPrimary;
+                e.currentTarget.style.background = theme.borderMuted;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = theme.textMuted;
+                e.currentTarget.style.background = "transparent";
+              }}
+              title="Mark as unread"
+            >
+              Mark as Unread
+            </button>
+          )}
+
+          {/* Close Button */}
+          <button
+            onClick={closeEmailThreadPanel}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: theme.textMuted,
+              cursor: "pointer",
+              fontSize: 20,
+              padding: "4px 8px",
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = theme.textPrimary;
+              e.currentTarget.style.background = theme.borderMuted;
+              e.currentTarget.style.borderRadius = "6px";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = theme.textMuted;
+              e.currentTarget.style.background = "transparent";
+            }}
+            title="Close"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       {/* Thread Messages */}

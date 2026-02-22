@@ -8,6 +8,7 @@
 import { useTheme } from "@/lib/providers/theme-provider";
 import { useInboxStore } from "@/lib/stores/inbox-store";
 import { getPriorityColor } from "@/lib/utils/inbox-view-helpers";
+import { useEmailActions } from "@/lib/hooks/use-email-actions";
 import type { Email } from "@/lib/types/email";
 
 interface EmailListItemProps {
@@ -20,13 +21,35 @@ export function EmailListItem({ email }: EmailListItemProps) {
   const toggleEmailSelection = useInboxStore(
     (state) => state.toggleEmailSelection
   );
+  const { markAsRead } = useEmailActions();
 
   const isSelected = selectedEmail?.id === email.id;
   const priorityColor = getPriorityColor(email.priority);
 
+  const handleEmailClick = () => {
+    console.log(`📧 Email clicked:`, {
+      subject: email.subject,
+      from: email.from,
+      isRead: email.read,
+      outlookMessageId: email.outlookMessageId,
+    });
+    
+    toggleEmailSelection(email);
+    
+    // Mark as read when opening (Outlook-style behavior)
+    if (!email.read && email.outlookMessageId) {
+      console.log(`📨 Marking email as read: ${email.outlookMessageId}`);
+      markAsRead([email.outlookMessageId]);
+    } else if (!email.read) {
+      console.warn(`⚠️ Cannot mark as read - missing outlookMessageId`);
+    } else {
+      console.log(`ℹ️ Email already read, skipping mark-as-read`);
+    }
+  };
+
   return (
     <div
-      onClick={() => toggleEmailSelection(email)}
+      onClick={handleEmailClick}
       style={{
         padding: "14px 16px",
         borderBottom: `1px solid ${theme.borderMuted}`,
@@ -73,23 +96,43 @@ export function EmailListItem({ email }: EmailListItemProps) {
           >
             {email.from}
           </span>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div
               style={{
-                fontSize: 10,
-                color: theme.textDim,
-                flexShrink: 0,
-                marginLeft: 8,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-end",
+                gap: 2,
               }}
             >
-              {email.time}
-            </span>
+              <span
+                style={{
+                  fontSize: 10,
+                  color: theme.textDim,
+                  flexShrink: 0,
+                  fontWeight: 600,
+                }}
+              >
+                {email.date}
+              </span>
+              <span
+                style={{
+                  fontSize: 9,
+                  color: theme.textDim,
+                  flexShrink: 0,
+                  opacity: 0.7,
+                }}
+              >
+                {email.time}
+              </span>
+            </div>
             <p
               style={{
                 backgroundColor: priorityColor,
                 width: 6,
                 height: 6,
                 borderRadius: "50%",
+                flexShrink: 0,
               }}
             ></p>
           </div>
